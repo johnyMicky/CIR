@@ -1,153 +1,120 @@
 import React, { useState } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { ref, get } from 'firebase/database';
 import { ShieldCheck, AlertCircle } from 'lucide-react';
+import { auth, db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 
 const Login = () => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
+  const { setUser } = useAuth();
 
-  const isAdminLogin = location.pathname === '/admin/login';
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const buttonFx =
+    "relative overflow-hidden transition-all duration-300 before:content-[''] before:absolute before:w-[140%] before:h-[140%] before:top-[-140%] before:left-[-140%] before:bg-[linear-gradient(120deg,transparent,rgba(255,255,255,0.35),transparent)] before:rotate-[25deg] before:transition-all before:duration-700 hover:before:top-[140%] hover:before:left-[140%]";
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
     try {
-      const response = await fetch('/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
+      const cred = await signInWithEmailAndPassword(auth, email.trim(), password);
+      const uid = cred.user.uid;
+
+      const userRef = ref(db, `users/${uid}`);
+      const snapshot = await get(userRef);
+
+      const dbUser = snapshot.exists() ? snapshot.val() : {};
+
+      setUser({
+        ...dbUser,
+        id: uid,
+        email: cred.user.email,
       });
 
-      let data;
-      const contentType = response.headers.get('content-type');
-      
-      if (contentType && contentType.includes('application/json')) {
-        data = await response.json();
-      } else {
-        const text = await response.text();
-        if (!response.ok) {
-          throw new Error(`Server error (${response.status}): ${text.substring(0, 50)}...`);
-        }
-        throw new Error('Server returned non-JSON response.');
-      }
-
-      if (response.ok) {
-        login(data.user);
-      } else {
-        setError(data.error || 'Login failed');
-      }
-    } catch (err: any) {
-      setError('An error occurred. Please try again.');
+      navigate('/dashboard');
+    } catch (err) {
+      console.error('Login error:', err);
+      setError('Invalid email or password.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="flex justify-center">
-          <Link to="/">
-            <ShieldCheck className="h-12 w-12 text-blue-600" />
-          </Link>
-        </div>
-        <h2 className="mt-6 text-center text-3xl font-extrabold text-slate-900">
-          {isAdminLogin ? 'Admin Portal Login' : 'Welcome to CIR - Cyber Intelligence Reports'}
-        </h2>
-        <p className="mt-2 text-center text-sm text-slate-600">
-          {isAdminLogin ? 'Please sign in to access the administrative dashboard' : 'Please input your username and password and login into your account'}
-        </p>
-        <p className="mt-2 text-center text-sm text-slate-600">
-          Haven't an account?{' '}
-          <Link to="/register" className="font-medium text-blue-600 hover:text-blue-500">
-            Signup here
-          </Link>
-        </p>
+    <div className="min-h-screen bg-[#030712] text-white flex items-center justify-center px-6">
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-[-120px] left-[8%] w-[380px] h-[380px] bg-blue-600/10 blur-[90px] rounded-full"></div>
+        <div className="absolute bottom-[-140px] right-[6%] w-[320px] h-[320px] bg-cyan-500/10 blur-[90px] rounded-full"></div>
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
-          <form className="space-y-6" onSubmit={handleSubmit}>
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative flex items-center gap-2" role="alert">
-                <AlertCircle className="h-5 w-5" />
-                <span className="block sm:inline">{error}</span>
-              </div>
-            )}
-            
-            <div>
-              <label htmlFor="username" className="block text-sm font-medium text-slate-700">
-                Username
-              </label>
-              <div className="mt-1">
-                <input
-                  id="username"
-                  name="username"
-                  type="text"
-                  required
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  className="appearance-none block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm placeholder-slate-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                />
-              </div>
-            </div>
+      <div className="relative z-10 w-full max-w-md rounded-[32px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-8 shadow-[0_12px_40px_rgba(0,0,0,0.28)]">
+        <div className="flex flex-col items-center text-center mb-8">
+          <div className="w-16 h-16 rounded-2xl bg-blue-600/20 border border-blue-500/20 flex items-center justify-center text-blue-400 mb-4">
+            <ShieldCheck size={30} />
+          </div>
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-slate-700">
-                Password
-              </label>
-              <div className="mt-1">
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  autoComplete="current-password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="appearance-none block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm placeholder-slate-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                />
-              </div>
-            </div>
+          <h1 className="text-3xl font-black tracking-tight mb-2">
+            Welcome back
+          </h1>
+          <p className="text-slate-400">
+            Sign in to access your private wallet dashboard
+          </p>
+        </div>
 
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <input
-                  id="remember-me"
-                  name="remember-me"
-                  type="checkbox"
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 rounded"
-                />
-                <label htmlFor="remember-me" className="ml-2 block text-sm text-slate-900">
-                  Remember me
-                </label>
-              </div>
+        {error && (
+          <div className="mb-5 rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 flex items-center gap-3 text-rose-300">
+            <AlertCircle size={18} />
+            <span>{error}</span>
+          </div>
+        )}
 
-              <div className="text-sm">
-                <a href="#" className="font-medium text-blue-600 hover:text-blue-500">
-                  Forgot your password?
-                </a>
-              </div>
-            </div>
+        <form onSubmit={handleLogin} className="space-y-4">
+          <div>
+            <label className="text-sm text-slate-300 mb-2 block">Email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              className="w-full rounded-2xl bg-black/20 border border-white/10 px-4 py-4 text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500"
+              required
+            />
+          </div>
 
-            <div>
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading ? 'Signing in...' : 'Sign in'}
-              </button>
-            </div>
-          </form>
+          <div>
+            <label className="text-sm text-slate-300 mb-2 block">Password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter password"
+              className="w-full rounded-2xl bg-black/20 border border-white/10 px-4 py-4 text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500"
+              required
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className={`w-full mt-2 px-6 py-4 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-semibold rounded-2xl shadow-[0_12px_30px_rgba(37,99,235,0.30)] ${buttonFx}`}
+          >
+            <span className="relative z-10">
+              {loading ? 'Signing in...' : 'Sign In'}
+            </span>
+          </button>
+        </form>
+
+        <div className="mt-4 text-center">
+          <Link to="/" className="text-sm text-slate-500 hover:text-slate-300">
+            Back to home
+          </Link>
         </div>
       </div>
     </div>
