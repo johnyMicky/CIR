@@ -1,60 +1,30 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { createContext, useContext, useState } from 'react';
+import { signOut } from 'firebase/auth';
+import { auth } from '../firebase';
 
-interface User {
-  id: number;
-  username: string;
-  role: 'admin' | 'client';
-  name: string;
-  email: string;
-  country?: string;
-  btc_balance?: number;
-  btc_address?: string;
-  eth_address?: string;
-  usdt_address?: string;
-}
+type AuthContextType = {
+  user: any;
+  setUser: React.Dispatch<React.SetStateAction<any>>;
+  login: (userData: any) => void;
+  logout: () => Promise<void>;
+};
 
-interface AuthContextType {
-  user: User | null;
-  login: (userData: User) => void;
-  logout: () => void;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-}
+const AuthContext = createContext<AuthContextType | null>(null);
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+  const [user, setUser] = useState<any>(null);
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-    setIsLoading(false);
-  }, []);
-
-  const login = (userData: User) => {
+  const login = (userData: any) => {
     setUser(userData);
-    localStorage.setItem('user', JSON.stringify(userData));
-    if (userData.role === 'admin') {
-      navigate('/admin');
-    } else {
-      navigate('/dashboard');
-    }
   };
 
-  const logout = () => {
+  const logout = async () => {
+    await signOut(auth);
     setUser(null);
-    localStorage.removeItem('user');
-    navigate('/login');
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isAuthenticated: !!user, isLoading }}>
+    <AuthContext.Provider value={{ user, setUser, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
@@ -62,8 +32,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+
+  if (!context) {
+    throw new Error('useAuth must be used inside AuthProvider');
   }
+
   return context;
 };
