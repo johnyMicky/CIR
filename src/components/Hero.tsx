@@ -16,10 +16,10 @@ const Hero = () => {
             className="space-y-6"
           >
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight tracking-tight">
-              Secure Your Future with <span className="text-blue-400">Axcel Private Wallet</span>
+              Secure Your Future with <span className="text-blue-400">CIR - Cyber Intelligence Reports</span>
             </h1>
             <p className="text-lg md:text-xl text-slate-300 leading-relaxed max-w-2xl">
-              Axcel Private Wallet provides a distributed node infrastructure and multi-chain interoperability, delivering institutional-grade security for your digital assets.
+              CIR - Cyber Intelligence Reports provides a distributed node infrastructure and multi-chain interoperability, delivering institutional-grade security for your digital assets.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 pt-4">
               <a href="#contact" className="px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-lg hover:shadow-blue-500/25 transition-all text-center">

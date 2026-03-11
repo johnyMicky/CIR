@@ -12,7 +12,7 @@ const SecuritySection = () => {
     {
       icon: <Shield className="w-8 h-8 text-blue-500" />,
       title: "Local Key Storage",
-      description: "Axcel never stores your keys on any server. Everything is stored locally on your device, giving you 100% control."
+      description: "CIR never stores your keys on any server. Everything is stored locally on your device, giving you 100% control."
     },
     {
       icon: <EyeOff className="w-8 h-8 text-blue-500" />,

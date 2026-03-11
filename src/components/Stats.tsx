@@ -39,7 +39,7 @@ const Stats = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold mb-4">Institutional-Grade Infrastructure for Global Users</h2>
-          <p className="text-blue-200 text-lg">Axcel Private Wallet provides the backbone for secure decentralized asset management.</p>
+          <p className="text-blue-200 text-lg">CIR - Cyber Intelligence Reports provides the backbone for secure decentralized asset management.</p>
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 text-center">

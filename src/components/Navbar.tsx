@@ -15,7 +15,7 @@ const Navbar = () => {
         <div className="flex justify-between h-20 items-center">
           <Link to="/" className="flex-shrink-0 flex items-center gap-2 cursor-pointer">
             <ShieldCheck className="h-8 w-8 text-blue-700" />
-            <span className="font-bold text-xl text-slate-900 tracking-tight">Axcel Private Wallet</span>
+            <span className="font-bold text-xl text-slate-900 tracking-tight">CIR - Cyber Intelligence Reports</span>
           </Link>
           
           <div className="hidden md:flex space-x-8 items-center">

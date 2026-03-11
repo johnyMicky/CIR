@@ -23,7 +23,7 @@ const Features = () => {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="text-lg text-slate-600 max-w-2xl mx-auto"
           >
-            Axcel Private Wallet is designed to provide institutional-grade security and multi-chain interoperability for all users.
+            CIR - Cyber Intelligence Reports is designed to provide institutional-grade security and multi-chain interoperability for all users.
           </motion.p>
         </div>
 

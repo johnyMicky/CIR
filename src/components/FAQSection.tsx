@@ -72,10 +72,10 @@ const FAQItem: React.FC<FAQItemProps> = ({ question, answer }) => {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <div className="border border-green-500 rounded-lg overflow-hidden bg-green-50/50 mb-4">
+    <div className="border border-blue-500 rounded-lg overflow-hidden bg-blue-50/50 mb-4">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-green-50 transition-colors"
+        className="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-blue-50 transition-colors"
       >
         <span className="font-medium text-slate-900 pr-8">{question}</span>
         <ChevronDown 
@@ -91,7 +91,7 @@ const FAQItem: React.FC<FAQItemProps> = ({ question, answer }) => {
             transition={{ duration: 0.3 }}
             className="overflow-hidden"
           >
-            <div className="px-6 pb-4 text-slate-600 leading-relaxed border-t border-green-500/20 pt-4">
+            <div className="px-6 pb-4 text-slate-600 leading-relaxed border-t border-blue-500/20 pt-4">
               {answer}
             </div>
           </motion.div>

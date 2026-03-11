@@ -10,7 +10,7 @@ const Footer = () => {
           <div className="space-y-6">
             <div className="flex items-center gap-2 text-white">
               <ShieldCheck className="h-8 w-8 text-blue-600" />
-              <span className="font-bold text-xl tracking-tight">Axcel Private Wallet</span>
+              <span className="font-bold text-xl tracking-tight">CIR - Cyber Intelligence Reports</span>
             </div>
             <p className="text-sm leading-relaxed">
               The most secure, non-custodial decentralized gateway to manage 500+ digital assets with military-grade encryption. Manage your portfolio with complete privacy and institutional-grade security.
@@ -47,7 +47,7 @@ const Footer = () => {
         </div>
         
         <div className="pt-8 border-t border-slate-900 flex flex-col md:flex-row justify-between items-center gap-4 text-xs">
-          <p>Copyright © 2025 Axcel Private Wallet All Rights Reserved</p>
+          <p>Copyright © 2025 CIR - Cyber Intelligence Reports All Rights Reserved</p>
           <div className="flex gap-6">
             <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Twitter</a>
             <a href="https://telegram.org" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Telegram</a>

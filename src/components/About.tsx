@@ -38,8 +38,8 @@ const About = () => {
           >
             <div className="space-y-4">
               <div className="flex items-center gap-2">
-                <div className="h-1 w-8 bg-green-500 rounded-full"></div>
-                <span className="text-green-600 font-medium tracking-wide uppercase text-sm">Welcome to Axcel Private Wallet</span>
+                <div className="h-1 w-8 bg-blue-500 rounded-full"></div>
+                <span className="text-blue-600 font-medium tracking-wide uppercase text-sm">Welcome to CIR - Cyber Intelligence Reports</span>
               </div>
               
               <h2 className="text-3xl md:text-4xl font-bold text-slate-900 leading-tight">
@@ -49,14 +49,14 @@ const About = () => {
 
             <div className="flex gap-6 items-start">
               <div className="flex-shrink-0">
-                <div className="w-14 h-14 bg-green-500 rounded-lg flex items-center justify-center text-white shadow-lg shadow-green-500/30">
+                <div className="w-14 h-14 bg-blue-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-blue-500/30">
                   <Hourglass className="w-7 h-7" />
                 </div>
               </div>
               <div className="space-y-3">
                 <h3 className="text-xl font-bold text-slate-900">Excellence in Decentralized Infrastructure</h3>
                 <p className="text-slate-600 leading-relaxed">
-                  Axcel Private Wallet develops advanced methodologies for secure asset management and hardware wallet integration support. Our goal is to promote transparency, responsible practices, and clarity within the digital asset environment by applying modern analytical tools and industry knowledge.
+                  CIR - Cyber Intelligence Reports develops advanced methodologies for secure asset management and hardware wallet integration support. Our goal is to promote transparency, responsible practices, and clarity within the digital asset environment by applying modern analytical tools and industry knowledge.
                 </p>
                 <p className="text-slate-600 leading-relaxed">
                   We assist individuals and institutions through structured non-custodial solutions, ensuring that your digital interactions are protected by military-grade encryption and local key storage.
