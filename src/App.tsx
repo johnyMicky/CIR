@@ -25,6 +25,7 @@ import {
 import { auth, db } from './firebase';
 import { useAuth } from './context/AuthContext';
 import Login from './pages/Login';
+import Dashboard from './pages/Dashboard';
 
 const LandingPage = () => {
   const buttonFx =
@@ -903,48 +904,6 @@ const LandingPage = () => {
   );
 };
 
-const DashboardPlaceholder = () => {
-  const { user, logout } = useAuth() as any;
-
-  const handleLogout = async () => {
-    await logout();
-  };
-
-  return (
-    <div className="min-h-screen bg-[#030712] text-white flex items-center justify-center px-6">
-      <div className="w-full max-w-2xl rounded-[32px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-10 shadow-[0_12px_40px_rgba(0,0,0,0.28)] text-center">
-        <div className="w-16 h-16 mx-auto rounded-2xl bg-blue-600/20 border border-blue-500/20 flex items-center justify-center text-blue-400 mb-6">
-          <ShieldCheck size={30} />
-        </div>
-
-        <h1 className="text-4xl font-black mb-3">Logged in successfully</h1>
-        <p className="text-slate-400 mb-2">
-          Welcome {user?.firstName || user?.email || 'User'}
-        </p>
-        <p className="text-slate-500 mb-8">
-          Firebase login and database sync are now active.
-        </p>
-
-        <div className="flex items-center justify-center gap-4">
-          <Link
-            to="/"
-            className="px-6 py-3 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10"
-          >
-            Back Home
-          </Link>
-
-          <button
-            onClick={handleLogout}
-            className="px-6 py-3 rounded-2xl bg-blue-600 hover:bg-blue-500"
-          >
-            Logout
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 function App() {
   const { setUser, user } = useAuth() as any;
   const [initializing, setInitializing] = useState(true);
@@ -996,7 +955,7 @@ function App() {
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <Login />} />
       <Route path="/register" element={<Navigate to="/" replace />} />
-      <Route path="/dashboard" element={user ? <DashboardPlaceholder /> : <Navigate to="/login" replace />} />
+      <Route path="/dashboard" element={user ? <Dashboard /> : <Navigate to="/login" replace />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
