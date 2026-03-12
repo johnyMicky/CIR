@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ref, onValue, push, set, update } from 'firebase/database';
+import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import {
   CreditCard,
@@ -12,7 +14,8 @@ import {
 import { Link } from 'react-router-dom';
 
 const Dashboard = () => {
-  const { user } = useAuth();
+  const { user } = useAuth() as any;
+
   const [coinData, setCoinData] = useState<Record<string, { price: number; change: number }>>({});
   const [loading, setLoading] = useState(true);
   const [userData, setUserData] = useState<any>(null);
@@ -36,31 +39,58 @@ const Dashboard = () => {
   const getQrUrl = (value: string) =>
     `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(value)}`;
 
-  const refreshData = async () => {
-    if (!user) return;
-
-    try {
-      const response = await fetch(`/api/me?userId=${user.id}`);
-      if (response.ok) {
-        const data = await response.json();
-        if (data && data.user) {
-          setUserData(data.user);
-        }
-      }
-
-      const txResponse = await fetch(`/api/transactions?userId=${user.id}`);
-      if (txResponse.ok) {
-        const txData = await txResponse.json();
-        setTransactions(txData);
-      }
-    } catch (error) {
-      console.error('Error fetching user data:', error);
-    }
-  };
-
   useEffect(() => {
-    refreshData();
-  }, [user]);
+    if (!user?.id) return;
+
+    const userRef = ref(db, `users/${user.id}`);
+    const unsubscribeUser = onValue(
+      userRef,
+      (snapshot) => {
+        if (snapshot.exists()) {
+          setUserData(snapshot.val());
+        } else {
+          setUserData(null);
+        }
+        setLoading(false);
+      },
+      (error) => {
+        console.error('User read error:', error);
+        setLoading(false);
+      }
+    );
+
+    const txRef = ref(db, `transactions/${user.id}`);
+    const unsubscribeTx = onValue(
+      txRef,
+      (snapshot) => {
+        if (snapshot.exists()) {
+          const rows = Object.entries(snapshot.val()).map(([id, value]) => ({
+            id,
+            ...(value as any)
+          }));
+
+          rows.sort(
+            (a: any, b: any) =>
+              new Date(b.created_at || b.timestamp || 0).getTime() -
+              new Date(a.created_at || a.timestamp || 0).getTime()
+          );
+
+          setTransactions(rows);
+        } else {
+          setTransactions([]);
+        }
+      },
+      (error) => {
+        console.error('Transactions read error:', error);
+        setTransactions([]);
+      }
+    );
+
+    return () => {
+      unsubscribeUser();
+      unsubscribeTx();
+    };
+  }, [user?.id]);
 
   useEffect(() => {
     const fetchPrices = async () => {
@@ -76,11 +106,8 @@ const Dashboard = () => {
           USDT: { price: data.tether?.usd || 0, change: data.tether?.usd_24h_change || 0 },
           SOL: { price: data.solana?.usd || 0, change: data.solana?.usd_24h_change || 0 }
         });
-
-        setLoading(false);
       } catch (error) {
         console.error('Error fetching crypto prices:', error);
-        setLoading(false);
       }
     };
 
@@ -90,8 +117,6 @@ const Dashboard = () => {
   }, []);
 
   const getPriceDisplay = (symbol: string) => {
-    if (loading) return { price: 'Loading...', change: 0, changeDisplay: '...' };
-
     const data = coinData[symbol];
     if (!data) return { price: 'N/A', change: 0, changeDisplay: 'N/A' };
 
@@ -102,55 +127,57 @@ const Dashboard = () => {
     };
   };
 
-  const btcBalance = Number(userData?.btc_balance || 0);
-  const ethBalance = Number(userData?.eth_balance || 0);
-  const usdtBalance = Number(userData?.usdt_balance || 0);
-  const solBalance = Number(userData?.sol_balance || 0);
-  const usdBalance = Number(userData?.usd_balance || 0);
+  const getAddressByCoin = (coin: string) => {
+    const addresses = userData?.depositAddresses || {};
+    return addresses?.[coin] || '';
+  };
+
+  const wallets = userData?.wallets || {};
+
+  const btcBalance = Number(wallets?.BTC || 0);
+  const ethBalance = Number(wallets?.ETH || 0);
+  const usdtBalance = Number(wallets?.USDT || 0);
+  const solBalance = Number(wallets?.SOL || 0);
+  const usdBalance = Number(userData?.balance || 0);
 
   const btcPrice = Number(coinData['BTC']?.price || 0);
   const ethPrice = Number(coinData['ETH']?.price || 0);
   const usdtPrice = Number(coinData['USDT']?.price || 0);
   const solPrice = Number(coinData['SOL']?.price || 0);
 
-  const totalBalance =
-    btcBalance * btcPrice +
-    ethBalance * ethPrice +
-    usdtBalance * usdtPrice +
-    solBalance * solPrice +
-    usdBalance;
+  const totalBalance = useMemo(() => {
+    return (
+      btcBalance * btcPrice +
+      ethBalance * ethPrice +
+      usdtBalance * usdtPrice +
+      solBalance * solPrice +
+      usdBalance
+    );
+  }, [btcBalance, ethBalance, usdtBalance, solBalance, btcPrice, ethPrice, usdtPrice, solPrice, usdBalance]);
 
   const handleWithdraw = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !withdrawAmount || !withdrawAddress) return;
+    if (!user?.id || !withdrawAmount || !withdrawAddress) return;
 
     setIsWithdrawing(true);
 
     try {
-      const response = await fetch('/api/transactions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: user.id,
-          amount: withdrawAmount,
-          currency: withdrawCoin,
-          source: withdrawAddress,
-          status: 'Pending',
-          type: 'Withdrawal',
-          created_at: new Date().toISOString()
-        })
+      const txRef = push(ref(db, `transactions/${user.id}`));
+
+      await set(txRef, {
+        amount: withdrawAmount,
+        currency: withdrawCoin,
+        source: withdrawAddress,
+        status: 'Pending',
+        type: 'withdrawal',
+        created_at: new Date().toISOString(),
+        timestamp: Date.now()
       });
 
-      if (response.ok) {
-        setIsWithdrawModalOpen(false);
-        setWithdrawAmount('');
-        setWithdrawAddress('');
-        refreshData();
-        alert('Withdrawal request submitted successfully. It is now pending approval.');
-      } else {
-        const data = await response.json();
-        alert(`Error: ${data.error || 'Withdrawal failed'}`);
-      }
+      setIsWithdrawModalOpen(false);
+      setWithdrawAmount('');
+      setWithdrawAddress('');
+      alert('Withdrawal request submitted successfully. It is now pending approval.');
     } catch (error) {
       console.error('Error submitting withdrawal:', error);
       alert('An error occurred while submitting the withdrawal.');
@@ -161,7 +188,7 @@ const Dashboard = () => {
 
   const handleExchange = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !exchangeAmount || exchangeFromCoin === exchangeToCoin) return;
+    if (!user?.id || !exchangeAmount || exchangeFromCoin === exchangeToCoin || !userData) return;
 
     setIsExchanging(true);
     setExchangeMessage('ბოდიშს გიხდით მოთმინებისთვის, გადაცვლა პროცესშია...');
@@ -170,41 +197,57 @@ const Dashboard = () => {
       try {
         const fromPrice = coinData[exchangeFromCoin]?.price || 1;
         const toPrice = coinData[exchangeToCoin]?.price || 1;
-        const amountInUsd = Number(exchangeAmount) * fromPrice;
-        const toAmount = amountInUsd / toPrice;
+        const amountNum = Number(exchangeAmount || 0);
 
-        await fetch('/api/transactions', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId: user.id,
-            amount: exchangeAmount,
-            currency: exchangeFromCoin,
-            source: `Exchange to ${exchangeToCoin}`,
-            status: 'Confirmed',
-            type: 'exchange_out',
-            created_at: new Date().toISOString()
-          })
+        if (!amountNum) {
+          throw new Error('Invalid exchange amount');
+        }
+
+        const amountInUsd = amountNum * fromPrice;
+        const toAmount = amountInUsd / toPrice;
+        const finalToAmount = Number((toAmount * 0.99999).toFixed(8));
+
+        const currentFromBalance = Number(userData?.wallets?.[exchangeFromCoin] || 0);
+        const currentToBalance = Number(userData?.wallets?.[exchangeToCoin] || 0);
+
+        if (currentFromBalance < amountNum) {
+          alert('Insufficient balance for exchange.');
+          setIsExchanging(false);
+          setExchangeMessage('');
+          return;
+        }
+
+        const updates: any = {};
+        updates[`users/${user.id}/wallets/${exchangeFromCoin}`] = currentFromBalance - amountNum;
+        updates[`users/${user.id}/wallets/${exchangeToCoin}`] = currentToBalance + finalToAmount;
+
+        await update(ref(db), updates);
+
+        const txOutRef = push(ref(db, `transactions/${user.id}`));
+        await set(txOutRef, {
+          amount: amountNum,
+          currency: exchangeFromCoin,
+          source: `Exchange to ${exchangeToCoin}`,
+          status: 'Confirmed',
+          type: 'exchange_out',
+          created_at: new Date().toISOString(),
+          timestamp: Date.now()
         });
 
-        await fetch('/api/transactions', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId: user.id,
-            amount: toAmount.toFixed(8),
-            currency: exchangeToCoin,
-            source: `Exchange from ${exchangeFromCoin}`,
-            status: 'Confirmed',
-            type: 'exchange_in',
-            created_at: new Date().toISOString()
-          })
+        const txInRef = push(ref(db, `transactions/${user.id}`));
+        await set(txInRef, {
+          amount: finalToAmount,
+          currency: exchangeToCoin,
+          source: `Exchange from ${exchangeFromCoin}`,
+          status: 'Confirmed',
+          type: 'exchange_in',
+          created_at: new Date().toISOString(),
+          timestamp: Date.now()
         });
 
         setIsExchangeModalOpen(false);
         setExchangeAmount('');
         setExchangeMessage('');
-        refreshData();
         alert('Exchange completed successfully!');
       } catch (error) {
         console.error('Error processing exchange:', error);
@@ -212,21 +255,17 @@ const Dashboard = () => {
       } finally {
         setIsExchanging(false);
       }
-    }, 120000);
-  };
-
-  const getAddressByCoin = (coin: string) => {
-    if (coin === 'BTC') return userData?.btc_address || '';
-    if (coin === 'ETH') return userData?.eth_address || '';
-    if (coin === 'USDT') return userData?.usdt_address || '';
-    return '';
+    }, 4000);
   };
 
   const assets = [
     {
       name: 'US Dollar',
       symbol: 'USD',
-      amount: `$${usdBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      amount: `$${usdBalance.toLocaleString(undefined, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      })}`,
       price: '$1.00',
       change: 0,
       changeDisplay: '0.00%',
@@ -288,10 +327,24 @@ const Dashboard = () => {
     }
   ];
 
-  if (loading || !userData) {
+  if (loading) {
     return (
       <div className="flex justify-center items-center min-h-[60vh]">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
+  if (!userData) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center px-6">
+        <div className="bg-[#1a1b1e] border border-slate-800 rounded-2xl p-8 text-center max-w-lg w-full">
+          <h2 className="text-2xl font-bold text-white mb-3">User profile not found</h2>
+          <p className="text-slate-400 mb-6">
+            Authentication worked, but no matching user record was found in Realtime Database.
+          </p>
+          <div className="text-slate-500 text-sm break-all">{user?.email || user?.id}</div>
+        </div>
       </div>
     );
   }
@@ -425,23 +478,9 @@ const Dashboard = () => {
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-lg font-bold text-white">Transaction History</h3>
             <button
-              onClick={() => {
-                const fetchUserData = async () => {
-                  if (!user) return;
-                  try {
-                    const txResponse = await fetch(`/api/transactions?userId=${user.id}`);
-                    if (txResponse.ok) {
-                      const txData = await txResponse.json();
-                      setTransactions(txData);
-                    }
-                  } catch (error) {
-                    console.error('Error fetching transactions:', error);
-                  }
-                };
-                fetchUserData();
-              }}
+              onClick={() => {}}
               className="text-slate-400 hover:text-white transition-colors"
-              title="Refresh Transactions"
+              title="Transactions auto-refresh from Firebase"
             >
               <RefreshCw size={18} />
             </button>
@@ -507,7 +546,11 @@ const Dashboard = () => {
                       </td>
 
                       <td className="py-4 text-right text-slate-400 text-sm">
-                        {tx.created_at ? new Date(tx.created_at).toLocaleDateString() : '-'}
+                        {tx.created_at
+                          ? new Date(tx.created_at).toLocaleDateString()
+                          : tx.timestamp
+                          ? new Date(tx.timestamp).toLocaleDateString()
+                          : '-'}
                       </td>
                     </tr>
                   ))}
