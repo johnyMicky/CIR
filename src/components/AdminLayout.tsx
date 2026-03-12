@@ -5,8 +5,11 @@ import {
   LayoutDashboard,
   Users,
   CreditCard,
+  Activity,
   LogOut,
-  ChevronRight
+  ChevronRight,
+  Bell,
+  Search
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 
@@ -44,7 +47,7 @@ const AdminLayout = () => {
         <aside className="hidden lg:flex w-[290px] shrink-0 border-r border-white/8 bg-[linear-gradient(180deg,#08101f_0%,#0b1220_100%)] flex-col">
           <div className="px-6 py-6 border-b border-white/8">
             <Link to="/admin/dashboard" className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-blue-600/20 border border-blue-500/20 flex items-center justify-center text-blue-400">
+              <div className="w-12 h-12 rounded-2xl bg-blue-600/20 border border-blue-500/20 flex items-center justify-center text-blue-400 shadow-[0_0_25px_rgba(37,99,235,0.15)]">
                 <ShieldCheck size={24} />
               </div>
               <div>
@@ -80,6 +83,27 @@ const AdminLayout = () => {
             })}
           </div>
 
+          <div className="px-4 mt-4">
+            <div className="rounded-[24px] border border-white/8 bg-[linear-gradient(180deg,rgba(37,99,235,0.10),rgba(255,255,255,0.02))] p-4">
+              <div className="flex items-center gap-2 text-blue-300 mb-3">
+                <Activity size={16} />
+                <span className="text-[11px] uppercase tracking-[0.18em] font-bold">
+                  Live Status
+                </span>
+              </div>
+              <div className="space-y-2 text-sm text-slate-300">
+                <div className="flex items-center justify-between">
+                  <span>Admin session</span>
+                  <span className="text-emerald-400 font-semibold">Active</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Panel security</span>
+                  <span className="text-blue-300 font-semibold">Protected</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div className="mt-auto p-4 border-t border-white/8">
             <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-4 mb-3">
               <div className="text-[10px] uppercase tracking-[0.22em] text-white/30 font-bold mb-2">
@@ -101,7 +125,7 @@ const AdminLayout = () => {
 
         <div className="flex-1 min-w-0">
           <header className="sticky top-0 z-30 border-b border-white/8 bg-[#030712]/85 backdrop-blur-xl">
-            <div className="px-5 md:px-8 py-4 flex items-center justify-between">
+            <div className="px-5 md:px-8 py-4 flex items-center justify-between gap-4">
               <div>
                 <div className="text-[10px] uppercase tracking-[0.28em] text-blue-300/80 font-bold mb-1">
                   Admin Workspace
@@ -109,6 +133,21 @@ const AdminLayout = () => {
                 <div className="text-xl md:text-2xl font-black tracking-tight">
                   Management Console
                 </div>
+              </div>
+
+              <div className="hidden md:flex items-center gap-3">
+                <div className="relative">
+                  <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                  <input
+                    type="text"
+                    placeholder="Search..."
+                    className="w-[220px] rounded-2xl bg-white/[0.04] border border-white/8 pl-10 pr-4 py-2.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <button className="w-11 h-11 rounded-2xl border border-white/8 bg-white/[0.04] hover:bg-white/[0.07] flex items-center justify-center text-slate-300">
+                  <Bell size={18} />
+                </button>
               </div>
             </div>
           </header>
