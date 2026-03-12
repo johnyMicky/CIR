@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { ref, set } from "firebase/database";
 import { auth, db } from "../firebase";
@@ -67,13 +67,7 @@ const Register = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const fullName = useMemo(() => {
-    return `${form.firstName} ${form.lastName}`.trim();
-  }, [form.firstName, form.lastName]);
-
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm((prev) => ({
       ...prev,
       [e.target.name]: e.target.value
@@ -97,18 +91,18 @@ const Register = () => {
     try {
       setLoading(true);
 
-      const userCredential = await createUserWithEmailAndPassword(
+      const cred = await createUserWithEmailAndPassword(
         auth,
         form.email.trim(),
         form.password
       );
 
-      const user = userCredential.user;
+      const user = cred.user;
 
-      await set(ref(db, "users/" + user.uid), {
+      await set(ref(db, `users/${user.uid}`), {
         firstName: form.firstName.trim(),
         lastName: form.lastName.trim(),
-        fullName,
+        fullName: `${form.firstName} ${form.lastName}`.trim(),
         email: form.email.trim().toLowerCase(),
         phone: form.phone.trim(),
         country: form.country.trim(),
@@ -121,11 +115,14 @@ const Register = () => {
         eth_balance: 0,
         usdt_balance: 0,
         usd_balance: 0,
+        balance: "0.00",
 
         btc_address: "",
         eth_address: "",
         usdt_address: "",
 
+        online: true,
+        last_seen: Date.now(),
         created_at: new Date().toISOString()
       });
 
@@ -164,10 +161,10 @@ const Register = () => {
               <label className="block text-sm text-slate-400 mb-2">First Name</label>
               <input
                 name="firstName"
-                placeholder="First Name"
                 value={form.firstName}
                 onChange={handleChange}
                 className="w-full p-3.5 rounded-2xl bg-black/30 border border-white/10 text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500"
+                placeholder="First Name"
                 required
               />
             </div>
@@ -176,10 +173,10 @@ const Register = () => {
               <label className="block text-sm text-slate-400 mb-2">Last Name</label>
               <input
                 name="lastName"
-                placeholder="Last Name"
                 value={form.lastName}
                 onChange={handleChange}
                 className="w-full p-3.5 rounded-2xl bg-black/30 border border-white/10 text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500"
+                placeholder="Last Name"
                 required
               />
             </div>
@@ -191,10 +188,10 @@ const Register = () => {
               <input
                 name="country"
                 list="country-list"
-                placeholder="Start typing your country"
                 value={form.country}
                 onChange={handleChange}
                 className="w-full p-3.5 rounded-2xl bg-black/30 border border-white/10 text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500"
+                placeholder="Start typing your country"
                 required
               />
               <datalist id="country-list">
@@ -208,10 +205,10 @@ const Register = () => {
               <label className="block text-sm text-slate-400 mb-2">State / Region</label>
               <input
                 name="stateRegion"
-                placeholder="State / Region"
                 value={form.stateRegion}
                 onChange={handleChange}
                 className="w-full p-3.5 rounded-2xl bg-black/30 border border-white/10 text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500"
+                placeholder="State / Region"
                 required
               />
             </div>
@@ -222,10 +219,10 @@ const Register = () => {
               <label className="block text-sm text-slate-400 mb-2">City</label>
               <input
                 name="city"
-                placeholder="City"
                 value={form.city}
                 onChange={handleChange}
                 className="w-full p-3.5 rounded-2xl bg-black/30 border border-white/10 text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500"
+                placeholder="City"
                 required
               />
             </div>
@@ -234,10 +231,10 @@ const Register = () => {
               <label className="block text-sm text-slate-400 mb-2">Phone Number</label>
               <input
                 name="phone"
-                placeholder="Phone Number"
                 value={form.phone}
                 onChange={handleChange}
                 className="w-full p-3.5 rounded-2xl bg-black/30 border border-white/10 text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500"
+                placeholder="Phone Number"
                 required
               />
             </div>
@@ -248,10 +245,10 @@ const Register = () => {
             <input
               name="email"
               type="email"
-              placeholder="Email"
               value={form.email}
               onChange={handleChange}
               className="w-full p-3.5 rounded-2xl bg-black/30 border border-white/10 text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500"
+              placeholder="Email"
               required
             />
           </div>
@@ -263,10 +260,10 @@ const Register = () => {
                 <input
                   name="password"
                   type={showPassword ? "text" : "password"}
-                  placeholder="Password"
                   value={form.password}
                   onChange={handleChange}
                   className="w-full p-3.5 rounded-2xl bg-black/30 border border-white/10 text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500 pr-12"
+                  placeholder="Password"
                   required
                 />
                 <button
@@ -285,10 +282,10 @@ const Register = () => {
                 <input
                   name="confirmPassword"
                   type={showConfirmPassword ? "text" : "password"}
-                  placeholder="Repeat Password"
                   value={form.confirmPassword}
                   onChange={handleChange}
                   className="w-full p-3.5 rounded-2xl bg-black/30 border border-white/10 text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500 pr-12"
+                  placeholder="Repeat Password"
                   required
                 />
                 <button
