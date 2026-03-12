@@ -1,22 +1,17 @@
-import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate } from "react-router-dom"
+import { useAuth } from "./context/AuthContext"
 
-import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
+import Login from "./pages/Login"
+import Dashboard from "./pages/Dashboard"
 
-import { useAuth } from './context/AuthContext';
-
-const Home = () => {
+function Home() {
   return (
-    <div className="min-h-screen bg-[#030712] text-white flex items-center justify-center">
+    <div className="min-h-screen flex items-center justify-center bg-[#030712] text-white">
       <div className="text-center">
-        <h1 className="text-5xl font-black mb-6">
+
+        <h1 className="text-5xl font-bold mb-6">
           Axcel Wallet
         </h1>
-
-        <p className="text-slate-400 mb-8">
-          Secure crypto wallet dashboard
-        </p>
 
         <a
           href="/login"
@@ -24,24 +19,26 @@ const Home = () => {
         >
           Login
         </a>
+
       </div>
     </div>
-  );
-};
+  )
+}
 
 function App() {
 
-  const { user, loading } = useAuth() as any;
+  const { user, loading } = useAuth() as any
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#030712] flex items-center justify-center text-blue-500">
+      <div className="min-h-screen flex items-center justify-center bg-[#030712] text-blue-500">
         Loading...
       </div>
-    );
+    )
   }
 
   return (
+
     <Routes>
 
       <Route
@@ -67,13 +64,9 @@ function App() {
         }
       />
 
-      <Route
-        path="*"
-        element={<Navigate to="/" replace />}
-      />
-
     </Routes>
-  );
+
+  )
 }
 
-export default App;
+export default App
