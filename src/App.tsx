@@ -1,8 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Routes, Route, Navigate, Link } from 'react-router-dom';
+import { Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth, db } from './firebase';
+import { ref, get } from 'firebase/database';
 import { useAuth } from './context/AuthContext';
 import {
   Shield,
+  UserPlus,
   ArrowRight,
   Lock,
   Wallet,
@@ -21,9 +25,17 @@ import {
 } from 'lucide-react';
 
 import Login from './pages/Login';
+import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 
+import AdminRoute from './components/AdminRoute';
+import AdminLayout from './admin/components/AdminLayout';
+import AdminDashboard from './admin/pages/AdminDashboard';
+
 const LandingPage = () => {
+  const location = useLocation();
+  const logoutSuccess = (location.state as any)?.logoutSuccess;
+
   const buttonFx =
     "relative overflow-hidden transition-all duration-300 before:content-[''] before:absolute before:w-[140%] before:h-[140%] before:top-[-140%] before:left-[-140%] before:bg-[linear-gradient(120deg,transparent,rgba(255,255,255,0.35),transparent)] before:rotate-[25deg] before:transition-all before:duration-700 hover:before:top-[140%] hover:before:left-[140%]";
 
@@ -259,10 +271,10 @@ const LandingPage = () => {
             </Link>
 
             <Link
-              to="/login"
+              to="/register"
               className={`bg-blue-600 hover:bg-blue-500 px-7 py-3 rounded-full text-[11px] font-black uppercase tracking-[0.22em] transition-all shadow-[0_10px_30px_rgba(37,99,235,0.25)] inline-flex items-center justify-center ${buttonFx}`}
             >
-              <span className="relative z-10">Access</span>
+              <span className="relative z-10">Register</span>
             </Link>
           </div>
         </div>
@@ -270,6 +282,17 @@ const LandingPage = () => {
 
       <section className="relative pt-20 pb-16">
         <div className="max-w-7xl mx-auto px-6">
+          {logoutSuccess && (
+            <div className="mb-6 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-5 py-4 shadow-[0_8px_30px_rgba(16,185,129,0.08)]">
+              <div className="text-[11px] uppercase tracking-[0.22em] text-emerald-300/80 font-bold mb-1">
+                Session Update
+              </div>
+              <div className="text-emerald-400 font-semibold">
+                Successfully logged out
+              </div>
+            </div>
+          )}
+
           <div className="grid lg:grid-cols-2 gap-14 items-center">
             <div className="space-y-8">
               <div className="inline-flex items-center gap-3 rounded-full border border-blue-500/20 bg-blue-500/10 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.25em] text-blue-300">
@@ -292,11 +315,11 @@ const LandingPage = () => {
 
               <div className="flex flex-col sm:flex-row gap-4">
                 <Link
-                  to="/login"
+                  to="/register"
                   className={`px-8 py-4 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-2xl shadow-[0_12px_30px_rgba(37,99,235,0.30)] transition-all inline-flex items-center justify-center gap-3 ${buttonFx}`}
                 >
-                  <Lock size={18} className="relative z-10" />
-                  <span className="relative z-10">Client Login</span>
+                  <UserPlus size={18} className="relative z-10" />
+                  <span className="relative z-10">Create Account</span>
                   <ArrowRight size={16} className="relative z-10" />
                 </Link>
 
@@ -304,8 +327,8 @@ const LandingPage = () => {
                   to="/login"
                   className={`px-8 py-4 bg-white/5 hover:bg-white/10 text-white font-semibold rounded-2xl border border-white/10 transition-all inline-flex items-center justify-center gap-3 backdrop-blur-sm ${buttonFx}`}
                 >
-                  <ShieldCheck size={16} className="relative z-10" />
-                  <span className="relative z-10">Secure Access</span>
+                  <Lock size={16} className="relative z-10" />
+                  <span className="relative z-10">Login</span>
                 </Link>
               </div>
 
@@ -488,6 +511,101 @@ const LandingPage = () => {
               </div>
             </div>
           </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mt-16">
+            <div className="rounded-[28px] border border-white/8 bg-white/[0.04] p-6 shadow-[0_12px_30px_rgba(0,0,0,0.12)]">
+              <div className="text-[11px] uppercase tracking-[0.22em] text-white/35 font-bold mb-3">
+                Secure Wallet Layer
+              </div>
+              <div className="text-lg font-semibold mb-2">Protected digital asset environment</div>
+              <p className="text-sm text-slate-400 leading-relaxed">
+                Built for clients who require a clean, private and secure wallet access layer
+                with controlled balance visibility.
+              </p>
+            </div>
+
+            <div className="rounded-[28px] border border-white/8 bg-white/[0.04] p-6 shadow-[0_12px_30px_rgba(0,0,0,0.12)]">
+              <div className="text-[11px] uppercase tracking-[0.22em] text-white/35 font-bold mb-3">
+                Asset Management
+              </div>
+              <div className="text-lg font-semibold mb-2">BTC, ETH and USDT support</div>
+              <p className="text-sm text-slate-400 leading-relaxed">
+                Access a premium interface designed for private asset tracking, deposit address
+                assignment and managed wallet visibility.
+              </p>
+            </div>
+
+            <div className="rounded-[28px] border border-white/8 bg-white/[0.04] p-6 shadow-[0_12px_30px_rgba(0,0,0,0.12)]">
+              <div className="text-[11px] uppercase tracking-[0.22em] text-white/35 font-bold mb-3">
+                Internal Routing
+              </div>
+              <div className="text-lg font-semibold mb-2">Controlled transfer architecture</div>
+              <p className="text-sm text-slate-400 leading-relaxed">
+                A premium cyber-fintech interface with structured access, secure routing logic
+                and consistent private client experience.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-10 rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] px-6 py-5 shadow-[0_12px_30px_rgba(0,0,0,0.12)]">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+              <div>
+                <div className="text-[11px] uppercase tracking-[0.24em] text-white/35 font-bold mb-2">
+                  Live Market Snapshot
+                </div>
+                <div className="text-lg font-semibold text-white">
+                  Real-time styled market strip for premium wallet atmosphere
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 lg:min-w-[620px]">
+                <div className="rounded-2xl border border-white/8 bg-black/20 px-5 py-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[11px] uppercase tracking-[0.18em] text-white/35 font-bold">
+                      BTC / USD
+                    </span>
+                    <span className={`text-sm font-semibold ${marketData.BTC.change >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                      {marketData.BTC.change >= 0 ? '+' : ''}
+                      {marketData.BTC.change.toFixed(2)}%
+                    </span>
+                  </div>
+                  <div className="text-2xl font-light tracking-tight">
+                    ${marketData.BTC.price.toLocaleString()}
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-white/8 bg-black/20 px-5 py-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[11px] uppercase tracking-[0.18em] text-white/35 font-bold">
+                      ETH / USD
+                    </span>
+                    <span className={`text-sm font-semibold ${marketData.ETH.change >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                      {marketData.ETH.change >= 0 ? '+' : ''}
+                      {marketData.ETH.change.toFixed(2)}%
+                    </span>
+                  </div>
+                  <div className="text-2xl font-light tracking-tight">
+                    ${marketData.ETH.price.toLocaleString()}
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-white/8 bg-black/20 px-5 py-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[11px] uppercase tracking-[0.18em] text-white/35 font-bold">
+                      USDT / USD
+                    </span>
+                    <span className={`text-sm font-semibold ${marketData.USDT.change >= 0 ? 'text-blue-400' : 'text-rose-400'}`}>
+                      {Math.abs(marketData.USDT.change) < 0.01
+                        ? 'Stable'
+                        : `${marketData.USDT.change >= 0 ? '+' : ''}${marketData.USDT.change.toFixed(2)}%`}
+                    </span>
+                  </div>
+                  <div className="text-2xl font-light tracking-tight">
+                    ${marketData.USDT.price.toFixed(2)}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
 
           <div className="mt-10 rounded-[28px] border border-white/8 bg-black/20 px-6 py-6 shadow-[0_12px_30px_rgba(0,0,0,0.12)]">
             <div className="flex items-center gap-3 mb-6">
@@ -537,7 +655,7 @@ const LandingPage = () => {
 
               <div className="rounded-[26px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.015))] p-4 h-[290px] overflow-hidden">
                 <div className="relative h-full overflow-hidden">
-                  <div className="absolute inset-0 flex flex-col gap-3">
+                  <div className="absolute inset-0 flex flex-col gap-3 transition-transform duration-700 ease-out">
                     {sliderWindow.map((review, index) => {
                       const realIndex = (activeReview + index) % reviews.length;
                       const isCurrent = realIndex === activeReview;
@@ -575,6 +693,85 @@ const LandingPage = () => {
                   <div className="pointer-events-none absolute inset-x-0 top-0 h-8 bg-gradient-to-b from-[#030712] to-transparent"></div>
                   <div className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-[#030712] to-transparent"></div>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-10 rounded-[28px] border border-white/8 bg-black/20 px-6 py-5 shadow-[0_12px_30px_rgba(0,0,0,0.12)]">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+              <div>
+                <div className="text-[11px] uppercase tracking-[0.24em] text-white/35 font-bold mb-2">
+                  Trust Layer
+                </div>
+                <div className="text-lg font-semibold text-white">
+                  Structured for private clients and premium secure access
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 lg:min-w-[760px]">
+                <div className="rounded-2xl border border-white/8 bg-white/[0.04] px-4 py-4">
+                  <div className="flex items-center gap-2 text-blue-400 mb-2">
+                    <ShieldCheck size={15} />
+                    <span className="text-[11px] uppercase tracking-[0.16em] text-white/35 font-bold">
+                      Protected
+                    </span>
+                  </div>
+                  <div className="text-sm font-semibold">Client Access Layer</div>
+                </div>
+
+                <div className="rounded-2xl border border-white/8 bg-white/[0.04] px-4 py-4">
+                  <div className="flex items-center gap-2 text-cyan-400 mb-2">
+                    <Database size={15} />
+                    <span className="text-[11px] uppercase tracking-[0.16em] text-white/35 font-bold">
+                      Managed
+                    </span>
+                  </div>
+                  <div className="text-sm font-semibold">Wallet Visibility</div>
+                </div>
+
+                <div className="rounded-2xl border border-white/8 bg-white/[0.04] px-4 py-4">
+                  <div className="flex items-center gap-2 text-emerald-400 mb-2">
+                    <Activity size={15} />
+                    <span className="text-[11px] uppercase tracking-[0.16em] text-white/35 font-bold">
+                      Stable
+                    </span>
+                  </div>
+                  <div className="text-sm font-semibold">Secure Routing Flow</div>
+                </div>
+
+                <div className="rounded-2xl border border-white/8 bg-white/[0.04] px-4 py-4">
+                  <div className="flex items-center gap-2 text-blue-400 mb-2">
+                    <Globe size={15} />
+                    <span className="text-[11px] uppercase tracking-[0.16em] text-white/35 font-bold">
+                      Multi Asset
+                    </span>
+                  </div>
+                  <div className="text-sm font-semibold">BTC / ETH / USDT</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-10 rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(37,99,235,0.10),rgba(255,255,255,0.02))] px-6 py-5 shadow-[0_12px_30px_rgba(0,0,0,0.12)] overflow-hidden">
+            <div className="flex items-center gap-6 whitespace-nowrap text-sm font-medium text-slate-300 overflow-hidden">
+              <div className="animate-[pulse_2s_ease-in-out_infinite] text-blue-400 font-semibold">
+                SYSTEM STATUS
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+                Node Integrity Verified
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-blue-400"></span>
+                Wallet Routing Active
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-cyan-400"></span>
+                BTC / ETH / USDT Support Online
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+                Private Access Layer Secured
               </div>
             </div>
           </div>
@@ -685,6 +882,10 @@ const LandingPage = () => {
                   <ChevronRight size={14} />
                   Login
                 </Link>
+                <Link to="/register" className="flex items-center gap-2 text-sm text-slate-300 hover:text-blue-400 transition-colors">
+                  <ChevronRight size={14} />
+                  Register
+                </Link>
               </div>
             </div>
 
@@ -719,9 +920,60 @@ const LandingPage = () => {
 };
 
 function App() {
-  const { user, loading } = useAuth() as any;
+  const { setUser, user } = useAuth() as any;
+  const [initializing, setInitializing] = useState(true);
 
-  if (loading) {
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      try {
+        if (firebaseUser) {
+          const userRef = ref(db, `users/${firebaseUser.uid}`);
+          const snapshot = await get(userRef);
+
+          if (snapshot.exists()) {
+            const dbUser = snapshot.val();
+
+            setUser((prev: any) => {
+              const nextUser = {
+                ...dbUser,
+                id: firebaseUser.uid,
+                email: firebaseUser.email,
+              };
+
+              if (JSON.stringify(prev) === JSON.stringify(nextUser)) {
+                return prev;
+              }
+
+              return nextUser;
+            });
+          } else {
+            setUser((prev: any) => {
+              const nextUser = {
+                email: firebaseUser.email,
+                id: firebaseUser.uid,
+              };
+
+              if (JSON.stringify(prev) === JSON.stringify(nextUser)) {
+                return prev;
+              }
+
+              return nextUser;
+            });
+          }
+        } else {
+          setUser(null);
+        }
+      } catch (e) {
+        console.error('Auth sync error:', e);
+      } finally {
+        setInitializing(false);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [setUser]);
+
+  if (initializing) {
     return (
       <div className="min-h-screen bg-[#020617] flex items-center justify-center text-blue-500 font-mono">
         Loading secure session...
@@ -733,7 +985,21 @@ function App() {
     <Routes>
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <Login />} />
+      <Route path="/register" element={user ? <Navigate to="/dashboard" replace /> : <Register />} />
       <Route path="/dashboard" element={user ? <Dashboard /> : <Navigate to="/login" replace />} />
+
+      <Route
+        path="/admin"
+        element={
+          <AdminRoute>
+            <AdminLayout />
+          </AdminRoute>
+        }
+      >
+        <Route index element={<AdminDashboard />} />
+        <Route path="dashboard" element={<AdminDashboard />} />
+      </Route>
+
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
