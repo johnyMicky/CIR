@@ -253,13 +253,7 @@ const LandingPage = () => {
           </Link>
 
           <div className="flex gap-3 items-center">
-            <Link
-              to="/admin/login"
-              className="hidden md:inline-flex text-sm font-bold opacity-60 hover:opacity-100 hover:text-blue-400 transition-all px-4"
-            >
-              Admin
-            </Link>
-
+            
             <Link
               to="/login"
               className="text-sm font-bold opacity-70 hover:opacity-100 hover:text-blue-500 transition-all px-4"
