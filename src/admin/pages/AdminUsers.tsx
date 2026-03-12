@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { ref, onValue } from "firebase/database";
 import { Link } from "react-router-dom";
-import { Search, Users, ChevronRight } from "lucide-react";
+import { Search, Users, ChevronRight, Wifi, WifiOff } from "lucide-react";
 import { db } from "../../firebase";
 
 type UserItem = {
@@ -17,6 +17,25 @@ type UserItem = {
   role?: string;
   status?: string;
   created_at?: string;
+  last_seen?: number | string;
+  online?: boolean;
+};
+
+const formatLastSeen = (value?: number | string) => {
+  if (!value) return "No activity yet";
+
+  const timestamp = typeof value === "string" ? Number(value) : value;
+  if (!timestamp) return "No activity yet";
+
+  const diff = Date.now() - timestamp;
+  const minutes = Math.floor(diff / 60000);
+  const hours = Math.floor(diff / 3600000);
+  const days = Math.floor(diff / 86400000);
+
+  if (minutes < 1) return "Just now";
+  if (minutes < 60) return `${minutes} min ago`;
+  if (hours < 24) return `${hours} hour ago`;
+  return `${days} day ago`;
 };
 
 const AdminUsers = () => {
@@ -53,7 +72,6 @@ const AdminUsers = () => {
 
   const filteredUsers = useMemo(() => {
     const q = search.trim().toLowerCase();
-
     if (!q) return users;
 
     return users.filter((user) => {
@@ -88,7 +106,7 @@ const AdminUsers = () => {
             Users Management
           </h1>
           <p className="text-slate-400 mt-2">
-            All registered users are listed here.
+            All registered users are listed here with live status and recent activity.
           </p>
         </div>
 
@@ -121,10 +139,10 @@ const AdminUsers = () => {
             {filteredUsers.map((user) => (
               <div
                 key={user.id}
-                className="rounded-[24px] border border-white/8 bg-black/20 p-4 md:p-5 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4"
+                className="rounded-[24px] border border-white/8 bg-black/20 p-4 md:p-5 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4"
               >
-                <div className="min-w-0">
-                  <div className="flex items-center gap-3 mb-2">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-3 mb-3">
                     <div className="w-11 h-11 rounded-2xl bg-blue-600/15 border border-blue-500/20 flex items-center justify-center text-blue-300 shrink-0">
                       <Users size={18} />
                     </div>
@@ -139,7 +157,7 @@ const AdminUsers = () => {
                     </div>
                   </div>
 
-                  <div className="grid md:grid-cols-4 gap-3 text-sm">
+                  <div className="grid md:grid-cols-3 xl:grid-cols-5 gap-3 text-sm">
                     <div className="text-slate-400">
                       <span className="text-white/90">Country:</span> {user.country || "-"}
                     </div>
@@ -152,17 +170,29 @@ const AdminUsers = () => {
                     <div className="text-slate-400">
                       <span className="text-white/90">Phone:</span> {user.phone || "-"}
                     </div>
+                    <div className="text-slate-400">
+                      <span className="text-white/90">Last seen:</span> {formatLastSeen(user.last_seen)}
+                    </div>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3 shrink-0">
-                  <div className="text-right hidden md:block">
+                <div className="flex items-center gap-3 shrink-0 flex-wrap">
+                  <div className="text-right">
                     <div className="text-xs uppercase tracking-[0.18em] text-white/30 font-bold">
                       {user.role || "user"}
                     </div>
                     <div className={`text-sm mt-1 font-semibold ${user.status === "active" ? "text-emerald-400" : "text-amber-400"}`}>
                       {user.status || "active"}
                     </div>
+                  </div>
+
+                  <div className={`inline-flex items-center gap-2 px-3 py-2 rounded-2xl border text-sm ${
+                    user.online
+                      ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300"
+                      : "border-white/10 bg-white/[0.04] text-slate-300"
+                  }`}>
+                    {user.online ? <Wifi size={16} /> : <WifiOff size={16} />}
+                    <span>{user.online ? "Online" : "Offline"}</span>
                   </div>
 
                   <Link
