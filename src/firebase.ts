@@ -3,13 +3,13 @@ import { getAuth } from 'firebase/auth';
 import { getDatabase } from 'firebase/database';
 
 const firebaseConfig = {
-  apiKey: 'YOUR_API_KEY',
-  authDomain: 'YOUR_PROJECT.firebaseapp.com',
-  databaseURL: 'https://YOUR_PROJECT-default-rtdb.firebaseio.com',
-  projectId: 'YOUR_PROJECT',
-  storageBucket: 'YOUR_PROJECT.appspot.com',
-  messagingSenderId: 'YOUR_SENDER_ID',
-  appId: 'YOUR_APP_ID'
+  apiKey: 'AIzaSyCSfBcYpTKfuTzKO_56JBtyBgQqXiggvM4',
+  authDomain: 'morganex-60185.firebaseapp.com',
+  databaseURL: 'https://morganex-60185-default-rtdb.firebaseio.com',
+  projectId: 'morganex-60185',
+  storageBucket: 'morganex-60185.firebasestorage.app',
+  messagingSenderId: '417098187610',
+  appId: '1:417098187610:web:dc15091645452e5c212963'
 };
 
 const app = initializeApp(firebaseConfig);
