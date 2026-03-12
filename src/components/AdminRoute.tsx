@@ -1,16 +1,22 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../context/AuthContext';
 
-const AdminRoute = ({ children }: { children: React.ReactNode }) => {
+type Props = {
+  children: React.ReactNode;
+};
+
+const AdminRoute = ({ children }: Props) => {
   const { user } = useAuth() as any;
 
   if (!user) {
-    return <Navigate to="/admin/login" replace />;
+    return <Navigate to="/login" replace />;
   }
 
-  if (user?.role !== 'admin') {
-    return <Navigate to="/" replace />;
+  const adminEmail = 'admin@axcelci.com';
+
+  if (user.email !== adminEmail) {
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <>{children}</>;
