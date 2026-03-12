@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { onAuthStateChanged } from 'firebase/auth';
-import { auth, db } from './firebase';
 import { ref, get } from 'firebase/database';
+import { auth, db } from './firebase';
 import { useAuth } from './context/AuthContext';
 import {
   Shield,
@@ -30,11 +30,11 @@ import Dashboard from './pages/Dashboard';
 
 import AdminRoute from './components/AdminRoute';
 import AdminLayout from './admin/components/AdminLayout';
-import AdminDashboard from './admin/pages/AdminDashboard';
 import AdminLogin from './admin/pages/AdminLogin';
+import AdminDashboard from './admin/pages/AdminDashboard';
 import AdminUsers from './admin/pages/AdminUsers';
 import AdminUserDetails from './admin/pages/AdminUserDetails';
-import AdminWithdrawals from './admin/pages/AdminWithdrawals';
+import AdminWithdrawals from './admin/pages/Withdrawals';
 
 const LandingPage = () => {
   const location = useLocation();
@@ -244,9 +244,9 @@ const LandingPage = () => {
   return (
     <div className="min-h-screen bg-[#030712] text-white font-sans selection:bg-blue-500/30 overflow-hidden">
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-[-120px] left-[8%] w-[380px] h-[380px] bg-blue-600/10 blur-[90px] rounded-full"></div>
-        <div className="absolute bottom-[-140px] right-[6%] w-[320px] h-[320px] bg-cyan-500/10 blur-[90px] rounded-full"></div>
-        <div className="absolute inset-0 opacity-[0.04] [background-image:linear-gradient(rgba(255,255,255,0.12)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.12)_1px,transparent_1px)] [background-size:42px_42px]"></div>
+        <div className="absolute top-[-120px] left-[8%] w-[380px] h-[380px] bg-blue-600/10 blur-[90px] rounded-full" />
+        <div className="absolute bottom-[-140px] right-[6%] w-[320px] h-[320px] bg-cyan-500/10 blur-[90px] rounded-full" />
+        <div className="absolute inset-0 opacity-[0.04] [background-image:linear-gradient(rgba(255,255,255,0.12)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.12)_1px,transparent_1px)] [background-size:42px_42px]" />
       </div>
 
       <nav className="relative border-b border-white/5 bg-[#030712]/80 backdrop-blur-xl sticky top-0 z-50">
@@ -290,9 +290,7 @@ const LandingPage = () => {
               <div className="text-[11px] uppercase tracking-[0.22em] text-emerald-300/80 font-bold mb-1">
                 Session Update
               </div>
-              <div className="text-emerald-400 font-semibold">
-                Successfully logged out
-              </div>
+              <div className="text-emerald-400 font-semibold">Successfully logged out</div>
             </div>
           )}
 
@@ -406,75 +404,367 @@ const LandingPage = () => {
                         24H Composite
                       </span>
                     </div>
-                    <div
-                      className={`text-3xl font-light tracking-tight ${
-                        marketData.BTC.change >= 0 ? 'text-emerald-400' : 'text-rose-400'
-                      }`}
-                    >
+                    <div className={`text-3xl font-light tracking-tight ${marketData.BTC.change >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                       {marketData.BTC.change >= 0 ? '+' : ''}
                       {marketData.BTC.change.toFixed(2)}%
                     </div>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-5 mt-10">
-                  <div className="rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-6">
-                    <div className="flex items-center gap-3 mb-4">
-                      <Users size={18} className="text-blue-400" />
-                      <div className="text-[11px] uppercase tracking-[0.22em] text-white/35 font-bold">
-                        Clients
+                <div className="space-y-4">
+                  <div className="rounded-2xl border border-white/8 bg-black/20 p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <Layers3 className="w-4 h-4 text-blue-400" />
+                        <span className="text-sm font-semibold">BTC Storage Node</span>
                       </div>
+                      <span className="text-sm text-emerald-400 font-semibold">
+                        ${marketData.BTC.price.toLocaleString()}
+                      </span>
                     </div>
-                    <div className="text-3xl font-black tracking-tight text-white">
-                      {(statsAnimated.users / 1000000).toFixed(1)}M+
+                    <div className="text-4xl font-light tracking-tight mb-2">1.000000</div>
+                    <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                      <div className="h-full w-[74%] bg-gradient-to-r from-blue-500 to-cyan-400 rounded-full" />
                     </div>
                   </div>
 
-                  <div className="rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-6">
-                    <div className="flex items-center gap-3 mb-4">
-                      <BarChart3 size={18} className="text-emerald-400" />
-                      <div className="text-[11px] uppercase tracking-[0.22em] text-white/35 font-bold">
-                        Assets Managed
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="rounded-2xl border border-white/8 bg-black/20 p-4">
+                      <div className="text-[11px] uppercase tracking-[0.18em] text-white/35 font-bold mb-2">
+                        Access Tier
                       </div>
+                      <div className="text-sm font-semibold">Private Operator</div>
                     </div>
-                    <div className="text-3xl font-black tracking-tight text-white">
-                      ${(statsAnimated.assets / 1000000000).toFixed(1)}B
-                    </div>
-                  </div>
 
-                  <div className="rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-6">
-                    <div className="flex items-center gap-3 mb-4">
-                      <Globe size={18} className="text-cyan-400" />
-                      <div className="text-[11px] uppercase tracking-[0.22em] text-white/35 font-bold">
-                        Countries
+                    <div className="rounded-2xl border border-white/8 bg-black/20 p-4">
+                      <div className="text-[11px] uppercase tracking-[0.18em] text-white/35 font-bold mb-2">
+                        Routing
                       </div>
-                    </div>
-                    <div className="text-3xl font-black tracking-tight text-white">
-                      {statsAnimated.countries}+
-                    </div>
-                  </div>
-
-                  <div className="rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-6">
-                    <div className="flex items-center gap-3 mb-4">
-                      <Activity size={18} className="text-blue-400" />
-                      <div className="text-[11px] uppercase tracking-[0.22em] text-white/35 font-bold">
-                        Uptime
-                      </div>
-                    </div>
-                    <div className="text-3xl font-black tracking-tight text-white">
-                      {statsAnimated.uptime.toFixed(2)}%
+                      <div className="text-sm font-semibold">Integrity Verified</div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="absolute -top-10 -right-12 w-72 h-72 bg-blue-500/20 rounded-full blur-3xl -z-10"></div>
-              <div className="absolute -bottom-12 -left-12 w-72 h-72 bg-cyan-500/10 rounded-full blur-3xl -z-10"></div>
+              <div className="absolute -top-10 -right-12 w-72 h-72 bg-blue-500/20 rounded-full blur-3xl -z-10" />
+              <div className="absolute -bottom-12 -left-12 w-72 h-72 bg-cyan-500/10 rounded-full blur-3xl -z-10" />
+            </div>
+          </div>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-5 mt-16">
+            <div className="rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-6 shadow-[0_12px_30px_rgba(0,0,0,0.12)]">
+              <div className="flex items-center gap-3 mb-4">
+                <Users size={18} className="text-blue-400" />
+                <div className="text-[11px] uppercase tracking-[0.22em] text-white/35 font-bold">
+                  Clients
+                </div>
+              </div>
+              <div className="text-3xl font-black tracking-tight text-white">
+                {(statsAnimated.users / 1000000).toFixed(1)}M+
+              </div>
+              <div className="text-sm text-slate-400 mt-2">
+                Private clients using the wallet environment worldwide
+              </div>
+            </div>
+
+            <div className="rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-6 shadow-[0_12px_30px_rgba(0,0,0,0.12)]">
+              <div className="flex items-center gap-3 mb-4">
+                <BarChart3 size={18} className="text-emerald-400" />
+                <div className="text-[11px] uppercase tracking-[0.22em] text-white/35 font-bold">
+                  Assets Managed
+                </div>
+              </div>
+              <div className="text-3xl font-black tracking-tight text-white">
+                ${(statsAnimated.assets / 1000000000).toFixed(1)}B
+              </div>
+              <div className="text-sm text-slate-400 mt-2">
+                Structured digital asset visibility across secure interfaces
+              </div>
+            </div>
+
+            <div className="rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-6 shadow-[0_12px_30px_rgba(0,0,0,0.12)]">
+              <div className="flex items-center gap-3 mb-4">
+                <Globe size={18} className="text-cyan-400" />
+                <div className="text-[11px] uppercase tracking-[0.22em] text-white/35 font-bold">
+                  Countries
+                </div>
+              </div>
+              <div className="text-3xl font-black tracking-tight text-white">
+                {statsAnimated.countries}+
+              </div>
+              <div className="text-sm text-slate-400 mt-2">
+                Global private client reach with multi-region access flow
+              </div>
+            </div>
+
+            <div className="rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-6 shadow-[0_12px_30px_rgba(0,0,0,0.12)]">
+              <div className="flex items-center gap-3 mb-4">
+                <Activity size={18} className="text-blue-400" />
+                <div className="text-[11px] uppercase tracking-[0.22em] text-white/35 font-bold">
+                  Uptime
+                </div>
+              </div>
+              <div className="text-3xl font-black tracking-tight text-white">
+                {statsAnimated.uptime.toFixed(2)}%
+              </div>
+              <div className="text-sm text-slate-400 mt-2">
+                Stable private wallet experience and protected routing layer
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mt-16">
+            <div className="rounded-[28px] border border-white/8 bg-white/[0.04] p-6 shadow-[0_12px_30px_rgba(0,0,0,0.12)]">
+              <div className="text-[11px] uppercase tracking-[0.22em] text-white/35 font-bold mb-3">
+                Secure Wallet Layer
+              </div>
+              <div className="text-lg font-semibold mb-2">Protected digital asset environment</div>
+              <p className="text-sm text-slate-400 leading-relaxed">
+                Built for clients who require a clean, private and secure wallet access layer
+                with controlled balance visibility.
+              </p>
+            </div>
+
+            <div className="rounded-[28px] border border-white/8 bg-white/[0.04] p-6 shadow-[0_12px_30px_rgba(0,0,0,0.12)]">
+              <div className="text-[11px] uppercase tracking-[0.22em] text-white/35 font-bold mb-3">
+                Asset Management
+              </div>
+              <div className="text-lg font-semibold mb-2">BTC, ETH and USDT support</div>
+              <p className="text-sm text-slate-400 leading-relaxed">
+                Access a premium interface designed for private asset tracking, deposit address
+                assignment and managed wallet visibility.
+              </p>
+            </div>
+
+            <div className="rounded-[28px] border border-white/8 bg-white/[0.04] p-6 shadow-[0_12px_30px_rgba(0,0,0,0.12)]">
+              <div className="text-[11px] uppercase tracking-[0.22em] text-white/35 font-bold mb-3">
+                Internal Routing
+              </div>
+              <div className="text-lg font-semibold mb-2">Controlled transfer architecture</div>
+              <p className="text-sm text-slate-400 leading-relaxed">
+                A premium cyber-fintech interface with structured access, secure routing logic
+                and consistent private client experience.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-10 rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] px-6 py-5 shadow-[0_12px_30px_rgba(0,0,0,0.12)]">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+              <div>
+                <div className="text-[11px] uppercase tracking-[0.24em] text-white/35 font-bold mb-2">
+                  Live Market Snapshot
+                </div>
+                <div className="text-lg font-semibold text-white">
+                  Real-time styled market strip for premium wallet atmosphere
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 lg:min-w-[620px]">
+                <div className="rounded-2xl border border-white/8 bg-black/20 px-5 py-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[11px] uppercase tracking-[0.18em] text-white/35 font-bold">
+                      BTC / USD
+                    </span>
+                    <span className={`text-sm font-semibold ${marketData.BTC.change >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                      {marketData.BTC.change >= 0 ? '+' : ''}
+                      {marketData.BTC.change.toFixed(2)}%
+                    </span>
+                  </div>
+                  <div className="text-2xl font-light tracking-tight">
+                    ${marketData.BTC.price.toLocaleString()}
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-white/8 bg-black/20 px-5 py-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[11px] uppercase tracking-[0.18em] text-white/35 font-bold">
+                      ETH / USD
+                    </span>
+                    <span className={`text-sm font-semibold ${marketData.ETH.change >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                      {marketData.ETH.change >= 0 ? '+' : ''}
+                      {marketData.ETH.change.toFixed(2)}%
+                    </span>
+                  </div>
+                  <div className="text-2xl font-light tracking-tight">
+                    ${marketData.ETH.price.toLocaleString()}
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-white/8 bg-black/20 px-5 py-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[11px] uppercase tracking-[0.18em] text-white/35 font-bold">
+                      USDT / USD
+                    </span>
+                    <span className={`text-sm font-semibold ${marketData.USDT.change >= 0 ? 'text-blue-400' : 'text-rose-400'}`}>
+                      {Math.abs(marketData.USDT.change) < 0.01
+                        ? 'Stable'
+                        : `${marketData.USDT.change >= 0 ? '+' : ''}${marketData.USDT.change.toFixed(2)}%`}
+                    </span>
+                  </div>
+                  <div className="text-2xl font-light tracking-tight">
+                    ${marketData.USDT.price.toFixed(2)}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+                    <div className="mt-10 rounded-[28px] border border-white/8 bg-black/20 px-6 py-6 shadow-[0_12px_30px_rgba(0,0,0,0.12)]">
+            <div className="flex items-center gap-3 mb-6">
+              <Quote size={18} className="text-blue-400" />
+              <div>
+                <div className="text-[11px] uppercase tracking-[0.24em] text-white/35 font-bold mb-1">
+                  Trusted by Private Clients Worldwide
+                </div>
+                <div className="text-lg font-semibold text-white">
+                  Client reviews from premium wallet users
+                </div>
+              </div>
+            </div>
+
+            <div className="grid lg:grid-cols-[1.08fr_0.92fr] gap-6 items-start">
+              <div className="rounded-[26px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-6 self-start min-h-[290px] flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center gap-1 mb-4">
+                    {Array.from({ length: reviews[activeReview].rating }).map((_, index) => (
+                      <Star key={index} size={15} className="text-amber-400 fill-amber-400" />
+                    ))}
+                  </div>
+
+                  <p className="text-lg leading-relaxed text-slate-200 min-h-[110px]">
+                    “{reviews[activeReview].text}”
+                  </p>
+                </div>
+
+                <div className="mt-6 pt-5 border-t border-white/8 flex items-center justify-between">
+                  <div>
+                    <div className="font-semibold text-white">{reviews[activeReview].name}</div>
+                    <div className="text-sm text-slate-400 flex items-center gap-2">
+                      <span>{flagMap[reviews[activeReview].country]}</span>
+                      <span>
+                        {reviews[activeReview].city}, {reviews[activeReview].country}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="text-right">
+                    <div className="text-[11px] uppercase tracking-[0.18em] text-white/30 font-bold">
+                      Private Client
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-[26px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.015))] p-4 h-[290px] overflow-hidden">
+                <div className="relative h-full overflow-hidden">
+                  <div className="absolute inset-0 flex flex-col gap-3 transition-transform duration-700 ease-out">
+                    {sliderWindow.map((review, index) => {
+                      const realIndex = (activeReview + index) % reviews.length;
+                      const isCurrent = realIndex === activeReview;
+
+                      return (
+                        <button
+                          key={`${review.name}-${realIndex}`}
+                          onClick={() => setActiveReview(realIndex)}
+                          className={`w-full text-left rounded-2xl border px-4 py-4 transition-all shrink-0 ${
+                            isCurrent
+                              ? 'border-blue-500/30 bg-blue-500/10 shadow-[0_0_18px_rgba(37,99,235,0.12)]'
+                              : 'border-white/8 bg-white/[0.03] hover:bg-white/[0.05]'
+                          } ${buttonFx}`}
+                        >
+                          <div className="relative z-10 flex items-start justify-between gap-4">
+                            <div>
+                              <div className="font-semibold text-white">{review.name}</div>
+                              <div className="text-sm text-slate-400 flex items-center gap-2 mt-1">
+                                <span>{flagMap[review.country]}</span>
+                                <span>{review.country}</span>
+                              </div>
+                            </div>
+
+                            {isCurrent && (
+                              <div className="text-[10px] uppercase tracking-[0.18em] text-blue-300 font-bold">
+                                Active
+                              </div>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="pointer-events-none absolute inset-x-0 top-0 h-8 bg-gradient-to-b from-[#030712] to-transparent" />
+                  <div className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-[#030712] to-transparent" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-10 rounded-[28px] border border-white/8 bg-black/20 px-6 py-5 shadow-[0_12px_30px_rgba(0,0,0,0.12)] overflow-hidden">
+            <div className="text-[11px] uppercase tracking-[0.24em] text-white/35 font-bold mb-4">
+              Live Activity Feed
+            </div>
+
+            <div className="overflow-hidden">
+              <div className="flex gap-4 min-w-max animate-[ticker_42s_linear_infinite]">
+                {[...activityItems, ...activityItems].map((item, index) => (
+                  <div
+                    key={`${item}-${index}`}
+                    className="rounded-full border border-white/8 bg-white/[0.04] px-5 py-3 text-sm text-slate-300 whitespace-nowrap"
+                  >
+                    {item}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <style>{`
+              @keyframes ticker {
+                0% { transform: translateX(0); }
+                100% { transform: translateX(-50%); }
+              }
+            `}</style>
+          </div>
+
+          <div className="mt-10 rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] px-6 py-6 shadow-[0_12px_30px_rgba(0,0,0,0.12)]">
+            <div className="grid lg:grid-cols-[1fr_auto] gap-5 items-center">
+              <div>
+                <div className="text-[11px] uppercase tracking-[0.24em] text-white/35 font-bold mb-2">
+                  Subscribe for Updates
+                </div>
+                <div className="text-xl font-semibold text-white mb-2">
+                  Receive platform news, updates and private release notices
+                </div>
+                <div className="text-sm text-slate-400">
+                  Enter your email to receive future wallet platform announcements.
+                </div>
+              </div>
+
+              <div className="w-full lg:w-auto">
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <input
+                    type="email"
+                    value={subscribeEmail}
+                    onChange={(e) => setSubscribeEmail(e.target.value)}
+                    placeholder="Enter your email"
+                    className="min-w-[280px] px-5 py-4 rounded-2xl bg-black/20 border border-white/10 text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500"
+                  />
+                  <button
+                    onClick={handleSubscribe}
+                    className={`px-7 py-4 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-2xl transition-all inline-flex items-center justify-center gap-3 ${buttonFx}`}
+                  >
+                    <Mail size={16} className="relative z-10" />
+                    <span className="relative z-10">Subscribe</span>
+                  </button>
+                </div>
+
+                {subscribeMessage && (
+                  <div className="text-sm text-blue-400 mt-3">{subscribeMessage}</div>
+                )}
+              </div>
             </div>
           </div>
         </div>
       </section>
-            <footer className="relative border-t border-white/5 mt-6">
+
+      <footer className="relative border-t border-white/5 mt-6">
         <div className="max-w-7xl mx-auto px-6 py-10">
           <div className="grid md:grid-cols-3 gap-8 items-start">
             <div>
