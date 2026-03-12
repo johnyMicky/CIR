@@ -1,52 +1,49 @@
-import React from 'react';
-import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
+import React from "react";
+import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import {
   ShieldCheck,
   LayoutDashboard,
   Users,
   CreditCard,
-  LogOut
-} from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
+  LogOut,
+  ChevronRight
+} from "lucide-react";
+import { useAuth } from "../../context/AuthContext";
 
 const AdminLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { logout, user } = useAuth() as any;
 
-  const handleLogout = async () => {
-    try {
-      await logout();
-      navigate('/admin/login');
-    } catch (error) {
-      console.error('Admin logout error:', error);
-    }
-  };
-
   const navItems = [
     {
-      label: 'Dashboard',
-      to: '/admin/dashboard',
+      label: "Dashboard",
+      to: "/admin/dashboard",
       icon: <LayoutDashboard size={18} />
     },
     {
-      label: 'Users',
-      to: '/admin/users',
+      label: "Users",
+      to: "/admin/users",
       icon: <Users size={18} />
     },
     {
-      label: 'Withdrawals',
-      to: '/admin/withdrawals',
+      label: "Withdrawals",
+      to: "/admin/withdrawals",
       icon: <CreditCard size={18} />
     }
   ];
 
+  const handleLogout = async () => {
+    await logout();
+    navigate("/admin/login");
+  };
+
   return (
     <div className="min-h-screen bg-[#030712] text-white">
       <div className="flex min-h-screen">
-        <aside className="w-[280px] border-r border-white/8 bg-[linear-gradient(180deg,#08101f_0%,#0b1220_100%)] hidden lg:flex flex-col">
+        <aside className="hidden lg:flex w-[290px] shrink-0 border-r border-white/8 bg-[linear-gradient(180deg,#08101f_0%,#0b1220_100%)] flex-col">
           <div className="px-6 py-6 border-b border-white/8">
-            <div className="flex items-center gap-3">
+            <Link to="/admin/dashboard" className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-2xl bg-blue-600/20 border border-blue-500/20 flex items-center justify-center text-blue-400">
                 <ShieldCheck size={24} />
               </div>
@@ -56,14 +53,14 @@ const AdminLayout = () => {
                   Control Panel
                 </div>
               </div>
-            </div>
+            </Link>
           </div>
 
           <div className="p-4 space-y-2">
             {navItems.map((item) => {
               const active =
                 location.pathname === item.to ||
-                (item.to === '/admin/dashboard' && location.pathname === '/admin');
+                (item.to === "/admin/dashboard" && location.pathname === "/admin");
 
               return (
                 <Link
@@ -71,12 +68,13 @@ const AdminLayout = () => {
                   to={item.to}
                   className={`flex items-center gap-3 rounded-2xl px-4 py-3 transition-all ${
                     active
-                      ? 'bg-blue-600/15 border border-blue-500/20 text-blue-300'
-                      : 'border border-transparent bg-white/[0.02] hover:bg-white/[0.05] text-slate-300'
+                      ? "bg-blue-600/15 border border-blue-500/20 text-blue-300 shadow-[0_0_18px_rgba(37,99,235,0.10)]"
+                      : "border border-transparent bg-white/[0.02] hover:bg-white/[0.05] text-slate-300"
                   }`}
                 >
-                  <span>{item.icon}</span>
+                  {item.icon}
                   <span className="font-medium">{item.label}</span>
+                  {active && <ChevronRight size={16} className="ml-auto" />}
                 </Link>
               );
             })}
@@ -87,8 +85,8 @@ const AdminLayout = () => {
               <div className="text-[10px] uppercase tracking-[0.22em] text-white/30 font-bold mb-2">
                 Signed in as
               </div>
-              <div className="font-semibold truncate">{user?.email || 'Admin'}</div>
-              <div className="text-sm text-blue-300 mt-1">{user?.role || 'admin'}</div>
+              <div className="font-semibold truncate">{user?.email || "Admin"}</div>
+              <div className="text-sm text-blue-300 mt-1">{user?.role || "admin"}</div>
             </div>
 
             <button
@@ -111,15 +109,6 @@ const AdminLayout = () => {
                 <div className="text-xl md:text-2xl font-black tracking-tight">
                   Management Console
                 </div>
-              </div>
-
-              <div className="lg:hidden">
-                <button
-                  onClick={handleLogout}
-                  className="px-4 py-2 rounded-xl border border-rose-500/20 bg-rose-500/10 text-rose-300"
-                >
-                  Logout
-                </button>
               </div>
             </div>
           </header>
