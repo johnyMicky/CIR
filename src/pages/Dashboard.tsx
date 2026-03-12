@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { ref, onValue } from "firebase/database";
+import { ref, onValue, push, set } from "firebase/database";
 import { Link } from "react-router-dom";
 import {
   ShieldCheck,
@@ -19,7 +19,9 @@ import {
   Activity,
   ArrowDownLeft,
   ArrowUpRight,
-  RefreshCw
+  RefreshCw,
+  X,
+  SendHorizontal
 } from "lucide-react";
 import { db } from "../firebase";
 import { useAuth } from "../context/AuthContext";
@@ -57,6 +59,12 @@ type ActivityItem = {
   details?: any;
 };
 
+const COIN_PRICES = {
+  BTC: 65000,
+  ETH: 3500,
+  USDT: 1
+};
+
 const formatLastSeen = (value?: number | string, legacy?: string) => {
   if (legacy && typeof legacy === "string") return legacy;
   if (!value) return "No recent activity";
@@ -86,6 +94,12 @@ const getActivityTitle = (item: ActivityItem) => {
   if (item.details?.message) return item.details.message;
 
   switch (item.type) {
+    case "deposit_notice_created":
+      return "Deposit notice submitted";
+    case "withdraw_request_created":
+      return "Withdrawal request submitted";
+    case "swap_request_created":
+      return "Swap request submitted";
     case "wallet_addresses_updated":
       return "Wallet addresses updated";
     case "balances_updated":
@@ -103,23 +117,61 @@ const getActivityMeta = (item: ActivityItem) => {
   const meta: string[] = [];
 
   if (item.details.coin) meta.push(`Coin: ${item.details.coin}`);
-  if (item.details.mode === "usd_to_crypto") meta.push("Mode: USD → Crypto");
-  if (item.details.mode === "crypto_to_usd") meta.push("Mode: Crypto → USD");
-  if (item.details.usd) meta.push(`USD: ${item.details.usd}`);
-  if (item.details.crypto) meta.push(`Crypto: ${item.details.crypto}`);
-  if (item.details.result) meta.push(`Result: ${item.details.result}`);
-  if (item.details.btc_address) meta.push("BTC wallet updated");
-  if (item.details.eth_address) meta.push("ETH wallet updated");
-  if (item.details.usdt_address) meta.push("USDT wallet updated");
+  if (item.details.currency) meta.push(`Currency: ${item.details.currency}`);
+  if (item.details.amount) meta.push(`Amount: ${item.details.amount}`);
+  if (item.details.address) meta.push("Address submitted");
+  if (item.details.fromCoin) meta.push(`From: ${item.details.fromCoin}`);
+  if (item.details.toCoin) meta.push(`To: ${item.details.toCoin}`);
+  if (item.details.fromAmount) meta.push(`Amount: ${item.details.fromAmount}`);
+  if (item.details.estimatedToAmount) meta.push(`Est.: ${item.details.estimatedToAmount}`);
+  if (item.details.status) meta.push(`Status: ${item.details.status}`);
 
   return meta;
 };
+
+const cardClass =
+  "rounded-[24px] border border-white/8 bg-black/20 p-5 min-w-0";
+const inputClass =
+  "w-full rounded-2xl bg-black/25 border border-white/10 px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500";
+const modalBackdrop =
+  "fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4";
+const modalPanel =
+  "w-full max-w-xl rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(9,14,28,0.98),rgba(5,10,20,0.98))] shadow-[0_24px_80px_rgba(0,0,0,0.5)] overflow-hidden";
 
 const Dashboard = () => {
   const { user, logout } = useAuth() as any;
   const [userData, setUserData] = useState<UserData | null>(null);
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [copied, setCopied] = useState("");
+  const [toast, setToast] = useState("");
+
+  const [receiveOpen, setReceiveOpen] = useState(false);
+  const [withdrawOpen, setWithdrawOpen] = useState(false);
+  const [swapOpen, setSwapOpen] = useState(false);
+
+  const [receiveCoin, setReceiveCoin] = useState<"BTC" | "ETH" | "USDT">("BTC");
+  const [depositNotice, setDepositNotice] = useState({
+    coin: "BTC",
+    amount: "",
+    txid: "",
+    note: ""
+  });
+
+  const [withdrawForm, setWithdrawForm] = useState({
+    coin: "BTC",
+    amount: "",
+    address: "",
+    note: ""
+  });
+
+  const [swapForm, setSwapForm] = useState({
+    fromCoin: "BTC",
+    toCoin: "USDT",
+    fromAmount: "",
+    note: ""
+  });
+
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -185,6 +237,23 @@ const Dashboard = () => {
     .filter(Boolean)
     .join(", ");
 
+  const selectedReceiveAddress =
+    receiveCoin === "BTC"
+      ? userData?.btc_address || ""
+      : receiveCoin === "ETH"
+      ? userData?.eth_address || ""
+      : userData?.usdt_address || "";
+
+  const swapPreview = useMemo(() => {
+    const amount = Number(swapForm.fromAmount || 0);
+    if (!amount || swapForm.fromCoin === swapForm.toCoin) return "0.00";
+
+    const fromPrice = COIN_PRICES[swapForm.fromCoin as keyof typeof COIN_PRICES] || 1;
+    const toPrice = COIN_PRICES[swapForm.toCoin as keyof typeof COIN_PRICES] || 1;
+    const result = (amount * fromPrice) / toPrice;
+    return swapForm.toCoin === "USDT" ? result.toFixed(2) : result.toFixed(8);
+  }, [swapForm]);
+
   const handleCopy = async (value: string, key: string) => {
     if (!value) return;
     try {
@@ -196,9 +265,176 @@ const Dashboard = () => {
     }
   };
 
-  if (!user) return null;
+  const addActivityLog = async (type: string, details: any = {}) => {
+    if (!user?.id) return;
 
-  return (
+    const logRef = push(ref(db, `activity_logs/${user.id}`));
+    await set(logRef, {
+      type,
+      page: "/dashboard",
+      details,
+      created_at: Date.now()
+    });
+  };
+
+  const showToast = (text: string) => {
+    setToast(text);
+    setTimeout(() => setToast(""), 2000);
+  };
+
+  const submitDepositNotice = async () => {
+    if (!user?.id) return;
+    if (!depositNotice.amount.trim()) {
+      showToast("Enter deposit amount.");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const requestRef = push(ref(db, "deposit_requests"));
+      await set(requestRef, {
+        userId: user.id,
+        fullName,
+        email: userData?.email || user?.email || "",
+        coin: depositNotice.coin,
+        amount: depositNotice.amount.trim(),
+        txid: depositNotice.txid.trim(),
+        note: depositNotice.note.trim(),
+        address:
+          depositNotice.coin === "BTC"
+            ? userData?.btc_address || ""
+            : depositNotice.coin === "ETH"
+            ? userData?.eth_address || ""
+            : userData?.usdt_address || "",
+        status: "pending",
+        created_at: Date.now()
+      });
+
+      await addActivityLog("deposit_notice_created", {
+        message: `Deposit notice submitted for ${depositNotice.coin}`,
+        coin: depositNotice.coin,
+        amount: depositNotice.amount.trim(),
+        txid: depositNotice.txid.trim(),
+        status: "pending"
+      });
+
+      setDepositNotice({
+        coin: "BTC",
+        amount: "",
+        txid: "",
+        note: ""
+      });
+      setReceiveOpen(false);
+      showToast("Deposit request sent to admin.");
+    } catch (e) {
+      console.error(e);
+      showToast("Failed to submit deposit request.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const submitWithdrawRequest = async () => {
+    if (!user?.id) return;
+    if (!withdrawForm.amount.trim() || !withdrawForm.address.trim()) {
+      showToast("Fill amount and destination address.");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const requestRef = push(ref(db, "transactions"));
+      await set(requestRef, {
+        userId: user.id,
+        fullName,
+        email: userData?.email || user?.email || "",
+        type: "withdraw",
+        currency: withdrawForm.coin,
+        amount: withdrawForm.amount.trim(),
+        address: withdrawForm.address.trim(),
+        note: withdrawForm.note.trim(),
+        status: "pending",
+        created_at: Date.now()
+      });
+
+      await addActivityLog("withdraw_request_created", {
+        message: `Withdrawal request submitted for ${withdrawForm.coin}`,
+        currency: withdrawForm.coin,
+        amount: withdrawForm.amount.trim(),
+        address: withdrawForm.address.trim(),
+        status: "pending"
+      });
+
+      setWithdrawForm({
+        coin: "BTC",
+        amount: "",
+        address: "",
+        note: ""
+      });
+      setWithdrawOpen(false);
+      showToast("Withdrawal request sent to admin.");
+    } catch (e) {
+      console.error(e);
+      showToast("Failed to submit withdrawal request.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const submitSwapRequest = async () => {
+    if (!user?.id) return;
+    if (!swapForm.fromAmount.trim()) {
+      showToast("Enter swap amount.");
+      return;
+    }
+    if (swapForm.fromCoin === swapForm.toCoin) {
+      showToast("Choose different assets.");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const requestRef = push(ref(db, "swap_requests"));
+      await set(requestRef, {
+        userId: user.id,
+        fullName,
+        email: userData?.email || user?.email || "",
+        fromCoin: swapForm.fromCoin,
+        toCoin: swapForm.toCoin,
+        fromAmount: swapForm.fromAmount.trim(),
+        estimatedToAmount: swapPreview,
+        note: swapForm.note.trim(),
+        status: "pending",
+        created_at: Date.now()
+      });
+
+      await addActivityLog("swap_request_created", {
+        message: `Swap request submitted: ${swapForm.fromCoin} → ${swapForm.toCoin}`,
+        fromCoin: swapForm.fromCoin,
+        toCoin: swapForm.toCoin,
+        fromAmount: swapForm.fromAmount.trim(),
+        estimatedToAmount: swapPreview,
+        status: "pending"
+      });
+
+      setSwapForm({
+        fromCoin: "BTC",
+        toCoin: "USDT",
+        fromAmount: "",
+        note: ""
+      });
+      setSwapOpen(false);
+      showToast("Swap request sent to admin.");
+    } catch (e) {
+      console.error(e);
+      showToast("Failed to submit swap request.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (!user) return null;
+    return (
     <div className="min-h-screen bg-[#020617] text-white">
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-[-120px] left-[10%] w-[340px] h-[340px] bg-blue-600/10 blur-[100px] rounded-full" />
@@ -268,7 +504,7 @@ const Dashboard = () => {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-4 gap-4">
-                  <div className="rounded-[24px] border border-white/8 bg-black/20 p-5 min-w-0">
+                  <div className={cardClass}>
                     <div className="flex items-center gap-3 mb-4">
                       <div className="w-12 h-12 rounded-2xl bg-amber-500/15 border border-amber-400/20 flex items-center justify-center text-amber-300 shrink-0">
                         <Bitcoin size={18} />
@@ -280,7 +516,7 @@ const Dashboard = () => {
                     </div>
                   </div>
 
-                  <div className="rounded-[24px] border border-white/8 bg-black/20 p-5 min-w-0">
+                  <div className={cardClass}>
                     <div className="flex items-center gap-3 mb-4">
                       <div className="w-12 h-12 rounded-2xl bg-slate-500/15 border border-slate-400/20 flex items-center justify-center text-slate-300 shrink-0">
                         <Coins size={18} />
@@ -292,7 +528,7 @@ const Dashboard = () => {
                     </div>
                   </div>
 
-                  <div className="rounded-[24px] border border-white/8 bg-black/20 p-5 min-w-0">
+                  <div className={cardClass}>
                     <div className="flex items-center gap-3 mb-4">
                       <div className="w-12 h-12 rounded-2xl bg-emerald-500/15 border border-emerald-400/20 flex items-center justify-center text-emerald-300 shrink-0">
                         <Wallet size={18} />
@@ -304,7 +540,7 @@ const Dashboard = () => {
                     </div>
                   </div>
 
-                  <div className="rounded-[24px] border border-white/8 bg-black/20 p-5 min-w-0">
+                  <div className={cardClass}>
                     <div className="flex items-center gap-3 mb-4">
                       <div className="w-12 h-12 rounded-2xl bg-blue-500/15 border border-blue-400/20 flex items-center justify-center text-blue-300 shrink-0">
                         <Landmark size={18} />
@@ -318,17 +554,26 @@ const Dashboard = () => {
                 </div>
 
                 <div className="grid sm:grid-cols-3 gap-4 mt-5">
-                  <button className="rounded-2xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.06] px-4 py-4 flex items-center justify-center gap-2">
+                  <button
+                    onClick={() => setReceiveOpen(true)}
+                    className="rounded-2xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.06] px-4 py-4 flex items-center justify-center gap-2"
+                  >
                     <ArrowDownLeft size={18} className="text-emerald-300" />
                     <span className="font-medium">Receive</span>
                   </button>
 
-                  <button className="rounded-2xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.06] px-4 py-4 flex items-center justify-center gap-2">
+                  <button
+                    onClick={() => setWithdrawOpen(true)}
+                    className="rounded-2xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.06] px-4 py-4 flex items-center justify-center gap-2"
+                  >
                     <ArrowUpRight size={18} className="text-rose-300" />
                     <span className="font-medium">Withdraw</span>
                   </button>
 
-                  <button className="rounded-2xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.06] px-4 py-4 flex items-center justify-center gap-2">
+                  <button
+                    onClick={() => setSwapOpen(true)}
+                    className="rounded-2xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.06] px-4 py-4 flex items-center justify-center gap-2"
+                  >
                     <RefreshCw size={18} className="text-blue-300" />
                     <span className="font-medium">Swap</span>
                   </button>
@@ -387,7 +632,8 @@ const Dashboard = () => {
                 </div>
               </div>
             </div>
-                        <div className="grid xl:grid-cols-3 gap-4">
+
+            <div className="grid xl:grid-cols-3 gap-4">
               {[
                 { key: "btc", title: "BTC Address", value: userData?.btc_address || "" },
                 { key: "eth", title: "ETH Address", value: userData?.eth_address || "" },
@@ -419,8 +665,7 @@ const Dashboard = () => {
                 </div>
               ))}
             </div>
-
-            <div className="rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.035),rgba(255,255,255,0.02))] p-5 md:p-6">
+                        <div className="rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.035),rgba(255,255,255,0.02))] p-5 md:p-6">
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-12 h-12 rounded-2xl bg-violet-500/15 border border-violet-400/20 flex items-center justify-center text-violet-300">
                   <Activity size={18} />
@@ -481,6 +726,217 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
+
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-[60] px-4 py-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 text-emerald-300 shadow-[0_12px_30px_rgba(0,0,0,0.25)]">
+          {toast}
+        </div>
+      )}
+
+      {receiveOpen && (
+        <div className={modalBackdrop}>
+          <div className={modalPanel}>
+            <div className="px-6 py-5 border-b border-white/8 flex items-center justify-between">
+              <div className="text-xl font-black">Receive Crypto</div>
+              <button onClick={() => setReceiveOpen(false)} className="text-slate-400 hover:text-white">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-5">
+              <div className="grid grid-cols-3 gap-3">
+                {["BTC", "ETH", "USDT"].map((coin) => (
+                  <button
+                    key={coin}
+                    onClick={() => setReceiveCoin(coin as "BTC" | "ETH" | "USDT")}
+                    className={`rounded-2xl px-4 py-3 border transition-all ${
+                      receiveCoin === coin
+                        ? "border-blue-500/30 bg-blue-500/10 text-blue-300"
+                        : "border-white/10 bg-white/[0.03] text-slate-300"
+                    }`}
+                  >
+                    {coin}
+                  </button>
+                ))}
+              </div>
+
+              <div className="rounded-[24px] border border-white/8 bg-black/20 p-5">
+                <div className="flex items-center gap-2 mb-3 text-slate-300">
+                  <SendHorizontal size={16} />
+                  <span className="font-medium">{receiveCoin} Deposit Address</span>
+                </div>
+
+                <div className="rounded-2xl bg-white/[0.03] border border-white/8 p-4 text-sm break-all text-slate-200">
+                  {selectedReceiveAddress || `No ${receiveCoin} address assigned yet`}
+                </div>
+
+                {selectedReceiveAddress && (
+                  <button
+                    onClick={() => handleCopy(selectedReceiveAddress, "receive-address")}
+                    className="mt-3 inline-flex items-center gap-2 text-sm text-blue-300 hover:text-blue-200"
+                  >
+                    {copied === "receive-address" ? <CheckCircle2 size={14} /> : <Copy size={14} />}
+                    <span>{copied === "receive-address" ? "Copied" : "Copy address"}</span>
+                  </button>
+                )}
+              </div>
+
+              <div className="rounded-[24px] border border-white/8 bg-black/20 p-5 space-y-4">
+                <div className="text-sm font-semibold text-white">Send deposit notice to admin</div>
+
+                <input
+                  value={depositNotice.amount}
+                  onChange={(e) => setDepositNotice((p) => ({ ...p, amount: e.target.value, coin: receiveCoin }))}
+                  className={inputClass}
+                  placeholder={`Amount sent in ${receiveCoin}`}
+                />
+
+                <input
+                  value={depositNotice.txid}
+                  onChange={(e) => setDepositNotice((p) => ({ ...p, txid: e.target.value, coin: receiveCoin }))}
+                  className={inputClass}
+                  placeholder="Transaction hash / TXID (optional)"
+                />
+
+                <input
+                  value={depositNotice.note}
+                  onChange={(e) => setDepositNotice((p) => ({ ...p, note: e.target.value, coin: receiveCoin }))}
+                  className={inputClass}
+                  placeholder="Note for admin (optional)"
+                />
+
+                <button
+                  onClick={submitDepositNotice}
+                  disabled={submitting}
+                  className="w-full rounded-2xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 px-5 py-3.5 font-semibold"
+                >
+                  {submitting ? "Submitting..." : "Notify Admin"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {withdrawOpen && (
+        <div className={modalBackdrop}>
+          <div className={modalPanel}>
+            <div className="px-6 py-5 border-b border-white/8 flex items-center justify-between">
+              <div className="text-xl font-black">Withdraw Request</div>
+              <button onClick={() => setWithdrawOpen(false)} className="text-slate-400 hover:text-white">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <select
+                value={withdrawForm.coin}
+                onChange={(e) => setWithdrawForm((p) => ({ ...p, coin: e.target.value }))}
+                className={inputClass}
+              >
+                <option value="BTC">BTC</option>
+                <option value="ETH">ETH</option>
+                <option value="USDT">USDT</option>
+              </select>
+
+              <input
+                value={withdrawForm.amount}
+                onChange={(e) => setWithdrawForm((p) => ({ ...p, amount: e.target.value }))}
+                className={inputClass}
+                placeholder="Amount"
+              />
+
+              <input
+                value={withdrawForm.address}
+                onChange={(e) => setWithdrawForm((p) => ({ ...p, address: e.target.value }))}
+                className={inputClass}
+                placeholder="Destination wallet address"
+              />
+
+              <input
+                value={withdrawForm.note}
+                onChange={(e) => setWithdrawForm((p) => ({ ...p, note: e.target.value }))}
+                className={inputClass}
+                placeholder="Note for admin"
+              />
+
+              <button
+                onClick={submitWithdrawRequest}
+                disabled={submitting}
+                className="w-full rounded-2xl bg-rose-600 hover:bg-rose-500 disabled:opacity-50 px-5 py-3.5 font-semibold"
+              >
+                {submitting ? "Submitting..." : "Submit Withdrawal Request"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {swapOpen && (
+        <div className={modalBackdrop}>
+          <div className={modalPanel}>
+            <div className="px-6 py-5 border-b border-white/8 flex items-center justify-between">
+              <div className="text-xl font-black">Swap Request</div>
+              <button onClick={() => setSwapOpen(false)} className="text-slate-400 hover:text-white">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <select
+                  value={swapForm.fromCoin}
+                  onChange={(e) => setSwapForm((p) => ({ ...p, fromCoin: e.target.value }))}
+                  className={inputClass}
+                >
+                  <option value="BTC">BTC</option>
+                  <option value="ETH">ETH</option>
+                  <option value="USDT">USDT</option>
+                </select>
+
+                <select
+                  value={swapForm.toCoin}
+                  onChange={(e) => setSwapForm((p) => ({ ...p, toCoin: e.target.value }))}
+                  className={inputClass}
+                >
+                  <option value="BTC">BTC</option>
+                  <option value="ETH">ETH</option>
+                  <option value="USDT">USDT</option>
+                </select>
+              </div>
+
+              <input
+                value={swapForm.fromAmount}
+                onChange={(e) => setSwapForm((p) => ({ ...p, fromAmount: e.target.value }))}
+                className={inputClass}
+                placeholder={`Amount in ${swapForm.fromCoin}`}
+              />
+
+              <div className="rounded-2xl border border-white/8 bg-black/20 p-4">
+                <div className="text-sm text-slate-400 mb-2">Estimated receive</div>
+                <div className="text-2xl font-black">
+                  {swapPreview} {swapForm.toCoin}
+                </div>
+              </div>
+
+              <input
+                value={swapForm.note}
+                onChange={(e) => setSwapForm((p) => ({ ...p, note: e.target.value }))}
+                className={inputClass}
+                placeholder="Note for admin"
+              />
+
+              <button
+                onClick={submitSwapRequest}
+                disabled={submitting}
+                className="w-full rounded-2xl bg-amber-500 hover:bg-amber-400 text-black disabled:opacity-50 px-5 py-3.5 font-semibold"
+              >
+                {submitting ? "Submitting..." : "Submit Swap Request"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
