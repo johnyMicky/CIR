@@ -32,6 +32,9 @@ import AdminRoute from './components/AdminRoute';
 import AdminLayout from './admin/components/AdminLayout';
 import AdminDashboard from './admin/pages/AdminDashboard';
 import AdminLogin from './admin/pages/AdminLogin';
+import AdminUsers from './admin/pages/AdminUsers';
+import AdminUserDetails from './admin/pages/AdminUserDetails';
+import AdminWithdrawals from './admin/pages/AdminWithdrawals';
 
 const LandingPage = () => {
   const location = useLocation();
@@ -280,15 +283,16 @@ const LandingPage = () => {
           </div>
         </div>
       </nav>
-
-      <section className="relative pt-20 pb-16">
+            <section className="relative pt-20 pb-16">
         <div className="max-w-7xl mx-auto px-6">
           {logoutSuccess && (
             <div className="mb-6 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-5 py-4 shadow-[0_8px_30px_rgba(16,185,129,0.08)]">
               <div className="text-[11px] uppercase tracking-[0.22em] text-emerald-300/80 font-bold mb-1">
                 Session Update
               </div>
-              <div className="text-emerald-400 font-semibold">Successfully logged out</div>
+              <div className="text-emerald-400 font-semibold">
+                Successfully logged out
+              </div>
             </div>
           )}
 
@@ -330,7 +334,8 @@ const LandingPage = () => {
                   <span className="relative z-10">Login</span>
                 </Link>
               </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-3">
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-3">
                 <div className="rounded-2xl border border-white/8 bg-white/[0.04] px-5 py-4">
                   <div className="text-[11px] uppercase tracking-[0.2em] text-white/35 font-bold mb-2">
                     Secure Access
@@ -401,43 +406,63 @@ const LandingPage = () => {
                         24H Composite
                       </span>
                     </div>
-                    <div className={`text-3xl font-light tracking-tight ${marketData.BTC.change >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                    <div
+                      className={`text-3xl font-light tracking-tight ${
+                        marketData.BTC.change >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                      }`}
+                    >
                       {marketData.BTC.change >= 0 ? '+' : ''}
                       {marketData.BTC.change.toFixed(2)}%
                     </div>
                   </div>
                 </div>
 
-                <div className="space-y-4">
-                  <div className="rounded-2xl border border-white/8 bg-black/20 p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <Layers3 className="w-4 h-4 text-blue-400" />
-                        <span className="text-sm font-semibold">BTC Storage Node</span>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-5 mt-10">
+                  <div className="rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <Users size={18} className="text-blue-400" />
+                      <div className="text-[11px] uppercase tracking-[0.22em] text-white/35 font-bold">
+                        Clients
                       </div>
-                      <span className="text-sm text-emerald-400 font-semibold">
-                        ${marketData.BTC.price.toLocaleString()}
-                      </span>
                     </div>
-                    <div className="text-4xl font-light tracking-tight mb-2">1.000000</div>
-                    <div className="h-2 bg-white/5 rounded-full overflow-hidden">
-                      <div className="h-full w-[74%] bg-gradient-to-r from-blue-500 to-cyan-400 rounded-full"></div>
+                    <div className="text-3xl font-black tracking-tight text-white">
+                      {(statsAnimated.users / 1000000).toFixed(1)}M+
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="rounded-2xl border border-white/8 bg-black/20 p-4">
-                      <div className="text-[11px] uppercase tracking-[0.18em] text-white/35 font-bold mb-2">
-                        Access Tier
+                  <div className="rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <BarChart3 size={18} className="text-emerald-400" />
+                      <div className="text-[11px] uppercase tracking-[0.22em] text-white/35 font-bold">
+                        Assets Managed
                       </div>
-                      <div className="text-sm font-semibold">Private Operator</div>
                     </div>
+                    <div className="text-3xl font-black tracking-tight text-white">
+                      ${(statsAnimated.assets / 1000000000).toFixed(1)}B
+                    </div>
+                  </div>
 
-                    <div className="rounded-2xl border border-white/8 bg-black/20 p-4">
-                      <div className="text-[11px] uppercase tracking-[0.18em] text-white/35 font-bold mb-2">
-                        Routing
+                  <div className="rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <Globe size={18} className="text-cyan-400" />
+                      <div className="text-[11px] uppercase tracking-[0.22em] text-white/35 font-bold">
+                        Countries
                       </div>
-                      <div className="text-sm font-semibold">Integrity Verified</div>
+                    </div>
+                    <div className="text-3xl font-black tracking-tight text-white">
+                      {statsAnimated.countries}+
+                    </div>
+                  </div>
+
+                  <div className="rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <Activity size={18} className="text-blue-400" />
+                      <div className="text-[11px] uppercase tracking-[0.22em] text-white/35 font-bold">
+                        Uptime
+                      </div>
+                    </div>
+                    <div className="text-3xl font-black tracking-tight text-white">
+                      {statsAnimated.uptime.toFixed(2)}%
                     </div>
                   </div>
                 </div>
@@ -447,107 +472,9 @@ const LandingPage = () => {
               <div className="absolute -bottom-12 -left-12 w-72 h-72 bg-cyan-500/10 rounded-full blur-3xl -z-10"></div>
             </div>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-5 mt-16">
-            <div className="rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-6 shadow-[0_12px_30px_rgba(0,0,0,0.12)]">
-              <div className="flex items-center gap-3 mb-4">
-                <Users size={18} className="text-blue-400" />
-                <div className="text-[11px] uppercase tracking-[0.22em] text-white/35 font-bold">
-                  Clients
-                </div>
-              </div>
-              <div className="text-3xl font-black tracking-tight text-white">
-                {(statsAnimated.users / 1000000).toFixed(1)}M+
-              </div>
-              <div className="text-sm text-slate-400 mt-2">
-                Private clients using the wallet environment worldwide
-              </div>
-            </div>
-
-            <div className="rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-6 shadow-[0_12px_30px_rgba(0,0,0,0.12)]">
-              <div className="flex items-center gap-3 mb-4">
-                <BarChart3 size={18} className="text-emerald-400" />
-                <div className="text-[11px] uppercase tracking-[0.22em] text-white/35 font-bold">
-                  Assets Managed
-                </div>
-              </div>
-              <div className="text-3xl font-black tracking-tight text-white">
-                ${(statsAnimated.assets / 1000000000).toFixed(1)}B
-              </div>
-              <div className="text-sm text-slate-400 mt-2">
-                Structured digital asset visibility across secure interfaces
-              </div>
-            </div>
-
-            <div className="rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-6 shadow-[0_12px_30px_rgba(0,0,0,0.12)]">
-              <div className="flex items-center gap-3 mb-4">
-                <Globe size={18} className="text-cyan-400" />
-                <div className="text-[11px] uppercase tracking-[0.22em] text-white/35 font-bold">
-                  Countries
-                </div>
-              </div>
-              <div className="text-3xl font-black tracking-tight text-white">
-                {statsAnimated.countries}+
-              </div>
-              <div className="text-sm text-slate-400 mt-2">
-                Global private client reach with multi-region access flow
-              </div>
-            </div>
-
-            <div className="rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-6 shadow-[0_12px_30px_rgba(0,0,0,0.12)]">
-              <div className="flex items-center gap-3 mb-4">
-                <Activity size={18} className="text-blue-400" />
-                <div className="text-[11px] uppercase tracking-[0.22em] text-white/35 font-bold">
-                  Uptime
-                </div>
-              </div>
-              <div className="text-3xl font-black tracking-tight text-white">
-                {statsAnimated.uptime.toFixed(2)}%
-              </div>
-              <div className="text-sm text-slate-400 mt-2">
-                Stable private wallet experience and protected routing layer
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mt-16">
-            <div className="rounded-[28px] border border-white/8 bg-white/[0.04] p-6 shadow-[0_12px_30px_rgba(0,0,0,0.12)]">
-              <div className="text-[11px] uppercase tracking-[0.22em] text-white/35 font-bold mb-3">
-                Secure Wallet Layer
-              </div>
-              <div className="text-lg font-semibold mb-2">Protected digital asset environment</div>
-              <p className="text-sm text-slate-400 leading-relaxed">
-                Built for clients who require a clean, private and secure wallet access layer
-                with controlled balance visibility.
-              </p>
-            </div>
-
-            <div className="rounded-[28px] border border-white/8 bg-white/[0.04] p-6 shadow-[0_12px_30px_rgba(0,0,0,0.12)]">
-              <div className="text-[11px] uppercase tracking-[0.22em] text-white/35 font-bold mb-3">
-                Asset Management
-              </div>
-              <div className="text-lg font-semibold mb-2">BTC, ETH and USDT support</div>
-              <p className="text-sm text-slate-400 leading-relaxed">
-                Access a premium interface designed for private asset tracking, deposit address
-                assignment and managed wallet visibility.
-              </p>
-            </div>
-
-            <div className="rounded-[28px] border border-white/8 bg-white/[0.04] p-6 shadow-[0_12px_30px_rgba(0,0,0,0.12)]">
-              <div className="text-[11px] uppercase tracking-[0.22em] text-white/35 font-bold mb-3">
-                Internal Routing
-              </div>
-              <div className="text-lg font-semibold mb-2">Controlled transfer architecture</div>
-              <p className="text-sm text-slate-400 leading-relaxed">
-                A premium cyber-fintech interface with structured access, secure routing logic
-                and consistent private client experience.
-              </p>
-            </div>
-          </div>
         </div>
       </section>
-
-      <footer className="relative border-t border-white/5 mt-6">
+            <footer className="relative border-t border-white/5 mt-6">
         <div className="max-w-7xl mx-auto px-6 py-10">
           <div className="grid md:grid-cols-3 gap-8 items-start">
             <div>
@@ -590,7 +517,8 @@ const LandingPage = () => {
                 </Link>
               </div>
             </div>
-                        <div>
+
+            <div>
               <div className="text-[11px] uppercase tracking-[0.22em] text-white/35 font-bold mb-4">
                 Support
               </div>
@@ -689,7 +617,7 @@ function App() {
 
       <Route
         path="/admin/login"
-        element={user?.role === 'admin' ? <Navigate to="/admin" replace /> : <AdminLogin />}
+        element={user?.role === 'admin' ? <Navigate to="/admin/dashboard" replace /> : <AdminLogin />}
       />
 
       <Route
@@ -700,8 +628,11 @@ function App() {
           </AdminRoute>
         }
       >
-        <Route index element={<AdminDashboard />} />
+        <Route index element={<Navigate to="/admin/dashboard" replace />} />
         <Route path="dashboard" element={<AdminDashboard />} />
+        <Route path="users" element={<AdminUsers />} />
+        <Route path="users/:id" element={<AdminUserDetails />} />
+        <Route path="withdrawals" element={<AdminWithdrawals />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
