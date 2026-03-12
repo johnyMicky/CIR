@@ -1,9 +1,16 @@
 import React from 'react';
-import { Link, Outlet, useNavigate } from 'react-router-dom';
-import { Shield, Users, LayoutDashboard, ArrowDownToLine, LogOut } from 'lucide-react';
+import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
+import {
+  ShieldCheck,
+  LayoutDashboard,
+  Users,
+  CreditCard,
+  LogOut
+} from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 const AdminLayout = () => {
+  const location = useLocation();
   const navigate = useNavigate();
   const { logout, user } = useAuth() as any;
 
@@ -16,68 +23,111 @@ const AdminLayout = () => {
     }
   };
 
+  const navItems = [
+    {
+      label: 'Dashboard',
+      to: '/admin/dashboard',
+      icon: <LayoutDashboard size={18} />
+    },
+    {
+      label: 'Users',
+      to: '/admin/users',
+      icon: <Users size={18} />
+    },
+    {
+      label: 'Withdrawals',
+      to: '/admin/withdrawals',
+      icon: <CreditCard size={18} />
+    }
+  ];
+
   return (
     <div className="min-h-screen bg-[#030712] text-white">
-      <div className="border-b border-white/10 bg-[#030712]/90 backdrop-blur-xl sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="bg-blue-600 p-2.5 rounded-2xl shadow-[0_0_25px_rgba(37,99,235,0.18)]">
-              <Shield size={22} className="text-white" />
-            </div>
-            <div>
-              <div className="text-xl font-black tracking-tight">Axcel Admin</div>
-              <div className="text-[10px] uppercase tracking-[0.28em] text-white/30 font-bold mt-1">
-                Control Panel
+      <div className="flex min-h-screen">
+        <aside className="w-[280px] border-r border-white/8 bg-[linear-gradient(180deg,#08101f_0%,#0b1220_100%)] hidden lg:flex flex-col">
+          <div className="px-6 py-6 border-b border-white/8">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-blue-600/20 border border-blue-500/20 flex items-center justify-center text-blue-400">
+                <ShieldCheck size={24} />
+              </div>
+              <div>
+                <div className="text-xl font-black tracking-tight">Axcel Admin</div>
+                <div className="text-[10px] uppercase tracking-[0.28em] text-white/30 font-bold mt-1">
+                  Control Panel
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="text-sm text-slate-400 hidden md:block">
-            {user?.email || 'admin'}
+          <div className="p-4 space-y-2">
+            {navItems.map((item) => {
+              const active =
+                location.pathname === item.to ||
+                (item.to === '/admin/dashboard' && location.pathname === '/admin');
+
+              return (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  className={`flex items-center gap-3 rounded-2xl px-4 py-3 transition-all ${
+                    active
+                      ? 'bg-blue-600/15 border border-blue-500/20 text-blue-300'
+                      : 'border border-transparent bg-white/[0.02] hover:bg-white/[0.05] text-slate-300'
+                  }`}
+                >
+                  <span>{item.icon}</span>
+                  <span className="font-medium">{item.label}</span>
+                </Link>
+              );
+            })}
           </div>
-        </div>
-      </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-8">
-        <aside className="rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-4 h-fit">
-          <div className="space-y-2">
-            <Link
-              to="/admin/dashboard"
-              className="flex items-center gap-3 rounded-2xl px-4 py-3 hover:bg-white/5 transition"
-            >
-              <LayoutDashboard size={18} className="text-blue-400" />
-              <span>Dashboard</span>
-            </Link>
-
-            <Link
-              to="/admin/users"
-              className="flex items-center gap-3 rounded-2xl px-4 py-3 hover:bg-white/5 transition"
-            >
-              <Users size={18} className="text-cyan-400" />
-              <span>Users</span>
-            </Link>
-
-            <Link
-              to="/admin/withdrawals"
-              className="flex items-center gap-3 rounded-2xl px-4 py-3 hover:bg-white/5 transition"
-            >
-              <ArrowDownToLine size={18} className="text-emerald-400" />
-              <span>Withdrawals</span>
-            </Link>
+          <div className="mt-auto p-4 border-t border-white/8">
+            <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-4 mb-3">
+              <div className="text-[10px] uppercase tracking-[0.22em] text-white/30 font-bold mb-2">
+                Signed in as
+              </div>
+              <div className="font-semibold truncate">{user?.email || 'Admin'}</div>
+              <div className="text-sm text-blue-300 mt-1">{user?.role || 'admin'}</div>
+            </div>
 
             <button
               onClick={handleLogout}
-              className="w-full flex items-center gap-3 rounded-2xl px-4 py-3 hover:bg-rose-500/10 text-rose-400 transition"
+              className="w-full flex items-center justify-center gap-2 rounded-2xl border border-rose-500/20 bg-rose-500/10 hover:bg-rose-500 hover:text-white text-rose-300 py-3 transition-all"
             >
-              <LogOut size={18} />
-              <span>Logout</span>
+              <LogOut size={16} />
+              <span className="font-medium">Logout</span>
             </button>
           </div>
         </aside>
 
-        <section>
-          <Outlet />
-        </section>
+        <div className="flex-1 min-w-0">
+          <header className="sticky top-0 z-30 border-b border-white/8 bg-[#030712]/85 backdrop-blur-xl">
+            <div className="px-5 md:px-8 py-4 flex items-center justify-between">
+              <div>
+                <div className="text-[10px] uppercase tracking-[0.28em] text-blue-300/80 font-bold mb-1">
+                  Admin Workspace
+                </div>
+                <div className="text-xl md:text-2xl font-black tracking-tight">
+                  Management Console
+                </div>
+              </div>
+
+              <div className="lg:hidden">
+                <button
+                  onClick={handleLogout}
+                  className="px-4 py-2 rounded-xl border border-rose-500/20 bg-rose-500/10 text-rose-300"
+                >
+                  Logout
+                </button>
+              </div>
+            </div>
+          </header>
+
+          <main className="px-5 md:px-8 py-6 md:py-8">
+            <Outlet />
+          </main>
+        </div>
       </div>
     </div>
   );
