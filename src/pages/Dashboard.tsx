@@ -19,7 +19,10 @@ import {
   Layers3,
   Sparkles,
   Copy,
-  Wallet
+  Wallet,
+  QrCode,
+  CheckCircle2,
+  AlertTriangle
 } from 'lucide-react';
 
 const Dashboard = () => {
@@ -180,8 +183,8 @@ const Dashboard = () => {
 
   const handleLogout = async () => {
     try {
-      navigate('/', { state: { logoutSuccess: true } });
       await logout();
+      navigate('/', { replace: true });
     } catch (error) {
       console.error('Logout error:', error);
     }
@@ -432,13 +435,13 @@ const Dashboard = () => {
           isDarkMode ? 'border-white/5 bg-[#030712]/75' : 'border-slate-200 bg-white/75'
         }`}
       >
-        <div className="max-w-[1600px] mx-auto px-6 md:px-8 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shadow-[0_0_20px_rgba(37,99,235,0.18)]">
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 md:px-8 py-4 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4 min-w-0">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shadow-[0_0_20px_rgba(37,99,235,0.18)] shrink-0">
               <ShieldCheck className="text-white" size={24} />
             </div>
-            <div>
-              <div className="text-xl font-black tracking-tight italic">Axcel Wallet</div>
+            <div className="min-w-0">
+              <div className="text-lg sm:text-xl font-black tracking-tight italic truncate">Axcel Wallet</div>
               <div className="text-[10px] uppercase tracking-[0.35em] opacity-35 font-bold">
                 your private wallet
               </div>
@@ -451,7 +454,7 @@ const Dashboard = () => {
             <span>Terminal_v4.2</span>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <button
               onClick={() => setShowNotifs(!showNotifs)}
               className={`w-11 h-11 rounded-2xl border border-white/8 bg-white/5 hover:bg-white/10 flex items-center justify-center relative ${buttonFx}`}
@@ -475,24 +478,24 @@ const Dashboard = () => {
 
             <button
               onClick={handleLogout}
-              className={`px-5 h-11 rounded-2xl border border-rose-500/20 bg-rose-500/8 text-rose-400 hover:bg-rose-500 hover:text-white flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.18em] ${buttonFx}`}
+              className={`px-4 sm:px-5 h-11 rounded-2xl border border-rose-500/20 bg-rose-500/8 text-rose-400 hover:bg-rose-500 hover:text-white flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.18em] ${buttonFx}`}
             >
               <LogOut size={16} className="relative z-10" />
-              <span className="relative z-10">Logout</span>
+              <span className="relative z-10 hidden sm:inline">Logout</span>
             </button>
           </div>
         </div>
       </nav>
 
-      <main className="relative max-w-[1600px] mx-auto px-6 md:px-8 py-8 md:py-10">
+      <main className="relative max-w-[1600px] mx-auto px-4 sm:px-6 md:px-8 py-8 md:py-10">
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
           <div className="xl:col-span-8 space-y-8">
             <section
-              className={`relative overflow-hidden rounded-[36px] border ${
+              className={`relative overflow-hidden rounded-[32px] md:rounded-[36px] border ${
                 isDarkMode
                   ? 'bg-[linear-gradient(135deg,#0b1220_0%,#0d1830_55%,#0b1220_100%)] border-white/6'
                   : 'bg-white border-slate-200'
-              } p-7 md:p-9 shadow-[0_12px_40px_rgba(0,0,0,0.22)]`}
+              } p-5 sm:p-7 md:p-9 shadow-[0_12px_40px_rgba(0,0,0,0.22)]`}
             >
               <div className="relative z-10 flex flex-col gap-8">
                 <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
@@ -508,17 +511,17 @@ const Dashboard = () => {
                       Welcome back, {welcomeName}
                     </div>
 
-                    <h1 className="text-5xl md:text-7xl font-light tracking-tight text-blue-500 leading-none">
+                    <h1 className="text-4xl sm:text-5xl md:text-7xl font-light tracking-tight text-blue-500 leading-none break-words">
                       ${Number(liveUser?.balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </h1>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4 min-w-[280px]">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 min-w-0 lg:min-w-[280px] w-full lg:w-auto">
                     <div className="rounded-[24px] border border-white/8 bg-black/20 p-4">
                       <div className="text-[10px] uppercase tracking-[0.2em] opacity-35 font-black mb-2">
                         Holdings value
                       </div>
-                      <div className="text-xl font-semibold">
+                      <div className="text-xl font-semibold break-words">
                         ${totalAssetValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}
                       </div>
                     </div>
@@ -571,10 +574,10 @@ const Dashboard = () => {
                   </div>
                 </div>
 
-                <div className="flex flex-wrap gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <button
                     onClick={() => setShowSwap(true)}
-                    className={`px-7 py-4 rounded-2xl bg-blue-600 hover:bg-blue-500 shadow-[0_12px_30px_rgba(37,99,235,0.22)] text-[11px] font-black uppercase tracking-[0.24em] flex items-center gap-3 ${buttonFx}`}
+                    className={`px-7 py-4 rounded-2xl bg-blue-600 hover:bg-blue-500 shadow-[0_12px_30px_rgba(37,99,235,0.22)] text-[11px] font-black uppercase tracking-[0.24em] flex items-center justify-center gap-3 ${buttonFx}`}
                   >
                     <ArrowLeftRight size={16} className="relative z-10" />
                     <span className="relative z-10">Asset Swap</span>
@@ -582,7 +585,7 @@ const Dashboard = () => {
 
                   <button
                     onClick={() => setShowWithdraw(true)}
-                    className={`px-7 py-4 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 text-[11px] font-black uppercase tracking-[0.24em] flex items-center gap-3 ${buttonFx}`}
+                    className={`px-7 py-4 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 text-[11px] font-black uppercase tracking-[0.24em] flex items-center justify-center gap-3 ${buttonFx}`}
                   >
                     <ArrowUpRight size={16} className="relative z-10" />
                     <span className="relative z-10">Withdraw Funds</span>
@@ -590,7 +593,7 @@ const Dashboard = () => {
 
                   <button
                     onClick={() => setShowReceive(true)}
-                    className={`px-7 py-4 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 text-[11px] font-black uppercase tracking-[0.24em] flex items-center gap-3 ${buttonFx}`}
+                    className={`px-7 py-4 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 text-[11px] font-black uppercase tracking-[0.24em] flex items-center justify-center gap-3 ${buttonFx}`}
                   >
                     <Wallet size={16} className="relative z-10" />
                     <span className="relative z-10">Receive Funds</span>
@@ -615,14 +618,14 @@ const Dashboard = () => {
                         : 'bg-white border-slate-200'
                     } p-6 hover:-translate-y-1 transition-all shadow-[0_10px_30px_rgba(0,0,0,0.16)]`}
                   >
-                    <div className="flex items-start justify-between mb-8">
-                      <div className="flex items-center gap-4">
+                    <div className="flex items-start justify-between mb-8 gap-4">
+                      <div className="flex items-center gap-4 min-w-0">
                         <img
                           src={coinData?.[coin]?.image}
                           alt={coin}
-                          className="w-11 h-11 rounded-full object-contain shadow-lg"
+                          className="w-11 h-11 rounded-full object-contain shadow-lg shrink-0"
                         />
-                        <div>
+                        <div className="min-w-0">
                           <div className="text-lg font-bold tracking-tight">{coin}</div>
                           <div className="text-[10px] uppercase tracking-[0.24em] opacity-30 font-black">
                             Storage node
@@ -630,7 +633,7 @@ const Dashboard = () => {
                         </div>
                       </div>
 
-                      <div className="text-right">
+                      <div className="text-right shrink-0">
                         <div className="text-[12px] font-semibold text-emerald-400">
                           ${price.toLocaleString()}
                         </div>
@@ -645,7 +648,7 @@ const Dashboard = () => {
                       </div>
                     </div>
 
-                    <div className="text-4xl font-light tracking-tight mb-2">
+                    <div className="text-4xl font-light tracking-tight mb-2 break-words">
                       {amount.toFixed(6)}
                     </div>
                     <div className="text-[11px] uppercase tracking-[0.18em] opacity-30 font-black mb-5">
@@ -661,9 +664,9 @@ const Dashboard = () => {
                       />
                     </div>
 
-                    <div className="flex items-center justify-between text-[12px]">
+                    <div className="flex items-center justify-between text-[12px] gap-4">
                       <span className="opacity-45">Estimated value</span>
-                      <span className="font-semibold">
+                      <span className="font-semibold break-words text-right">
                         ${usdValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}
                       </span>
                     </div>
@@ -682,11 +685,11 @@ const Dashboard = () => {
               } p-6 shadow-[0_10px_30px_rgba(0,0,0,0.16)]`}
             >
               <div className="flex items-start justify-between mb-5 gap-4">
-                <div>
+                <div className="min-w-0">
                   <div className="text-[10px] uppercase tracking-[0.28em] opacity-35 font-black mb-2">
                     Operator profile
                   </div>
-                  <div className="text-xl font-semibold">{profileFullName}</div>
+                  <div className="text-xl font-semibold break-words">{profileFullName}</div>
                 </div>
                 <div className="w-12 h-12 rounded-2xl bg-blue-600/15 border border-blue-500/20 flex items-center justify-center text-blue-400 font-bold shrink-0">
                   {(firstName?.[0] || user?.email?.[0] || 'U').toUpperCase()}
@@ -703,19 +706,19 @@ const Dashboard = () => {
               </div>
 
               <div className="space-y-3">
-                <div className="rounded-2xl bg-black/20 border border-white/6 px-4 py-3 flex items-center justify-between">
+                <div className="rounded-2xl bg-black/20 border border-white/6 px-4 py-3 flex items-center justify-between gap-4">
                   <span className="text-sm opacity-55">Email</span>
                   <span className="text-sm font-medium truncate max-w-[180px]">
                     {user?.email || 'N/A'}
                   </span>
                 </div>
-                <div className="rounded-2xl bg-black/20 border border-white/6 px-4 py-3 flex items-center justify-between">
+                <div className="rounded-2xl bg-black/20 border border-white/6 px-4 py-3 flex items-center justify-between gap-4">
                   <span className="text-sm opacity-55">Country</span>
-                  <span className="text-sm font-medium">{profileCountry}</span>
+                  <span className="text-sm font-medium text-right">{profileCountry}</span>
                 </div>
-                <div className="rounded-2xl bg-black/20 border border-white/6 px-4 py-3 flex items-center justify-between">
+                <div className="rounded-2xl bg-black/20 border border-white/6 px-4 py-3 flex items-center justify-between gap-4">
                   <span className="text-sm opacity-55">Phone</span>
-                  <span className="text-sm font-medium">{profilePhone}</span>
+                  <span className="text-sm font-medium text-right">{profilePhone}</span>
                 </div>
               </div>
             </section>
@@ -742,9 +745,9 @@ const Dashboard = () => {
                       className="rounded-[24px] border border-white/6 bg-black/20 p-4 hover:bg-black/25 transition-all"
                     >
                       <div className="flex items-start justify-between gap-4">
-                        <div className="flex items-start gap-3">
+                        <div className="flex items-start gap-3 min-w-0">
                           <div
-                            className={`w-11 h-11 rounded-2xl flex items-center justify-center ${
+                            className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${
                               tx.status === 'PENDING'
                                 ? 'bg-amber-500/10 text-amber-400'
                                 : 'bg-emerald-500/10 text-emerald-400'
@@ -757,8 +760,8 @@ const Dashboard = () => {
                             )}
                           </div>
 
-                          <div>
-                            <div className="text-sm font-semibold">
+                          <div className="min-w-0">
+                            <div className="text-sm font-semibold break-words">
                               {clientTitleForTx(tx)}
                             </div>
                             <div className="text-[12px] opacity-40 mt-1">
@@ -769,7 +772,7 @@ const Dashboard = () => {
                           </div>
                         </div>
 
-                        <div className="text-right">
+                        <div className="text-right shrink-0">
                           <div className="text-sm font-semibold">
                             {tx.amount} {tx.coin || tx.fromCoin || ''}
                           </div>
@@ -818,31 +821,34 @@ const Dashboard = () => {
       </main>
 
       {showSwap && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-10">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 md:p-8">
           <div className="absolute inset-0 bg-[#030712]/92 backdrop-blur-xl" />
-          <div className="relative w-full max-w-[560px] bg-[linear-gradient(145deg,rgba(255,255,255,0.14),rgba(255,255,255,0.03))] border border-white/20 rounded-[28px] backdrop-blur-[32px] p-8 shadow-[0_24px_70px_rgba(0,0,0,0.55)] overflow-hidden">
+          <div className="relative w-full max-w-[560px] max-h-[92vh] overflow-y-auto bg-[linear-gradient(145deg,rgba(255,255,255,0.14),rgba(255,255,255,0.03))] border border-white/20 rounded-[28px] backdrop-blur-[32px] p-5 sm:p-6 md:p-8 shadow-[0_24px_70px_rgba(0,0,0,0.55)]">
             <div className="absolute top-[-80px] left-[-80px] w-[220px] h-[220px] bg-blue-500/10 blur-[70px] rounded-full" />
-            <button onClick={() => setShowSwap(false)} className={`absolute top-5 right-5 w-11 h-11 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 flex items-center justify-center ${buttonFx}`}>
+            <button
+              onClick={() => setShowSwap(false)}
+              className={`absolute top-4 right-4 sm:top-5 sm:right-5 w-11 h-11 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 flex items-center justify-center ${buttonFx}`}
+            >
               <X size={18} className="relative z-10" />
             </button>
 
             {swapStep === 1 ? (
               <div className="relative z-10">
-                <div className="flex justify-between items-center mb-7 gap-4">
-                  <div className="text-2xl font-semibold">Swap Crypto</div>
-                  <div className="text-[13px] text-slate-400">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-7 gap-3 sm:gap-4 pr-12">
+                  <div className="text-xl sm:text-2xl font-semibold">Swap Crypto</div>
+                  <div className="text-[12px] sm:text-[13px] text-slate-400 sm:text-right">
                     Portfolio Balance: <b className="text-white">{Number(liveUser?.wallets?.[swapFrom] || 0).toFixed(6)} {swapFrom}</b>
                   </div>
                 </div>
 
                 <div className="mb-6">
                   <span className="text-[12px] uppercase tracking-[1px] text-slate-400 mb-2 block">From Asset</span>
-                  <div className="flex gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     {assets.map((coin) => (
                       <button
                         key={coin}
                         onClick={() => handleSwapFromChange(coin)}
-                        className={`flex-1 border rounded-[14px] px-3 py-3 flex items-center gap-3 transition-all relative overflow-hidden ${
+                        className={`border rounded-[14px] px-3 py-4 flex items-center justify-center gap-3 transition-all relative overflow-hidden ${
                           swapFrom === coin
                             ? 'border-blue-500 bg-blue-500/20 shadow-[0_0_12px_rgba(59,130,246,0.35)]'
                             : 'border-white/20 bg-[linear-gradient(135deg,rgba(255,255,255,.06),rgba(255,255,255,.01))] hover:border-blue-500 hover:bg-blue-500/10'
@@ -863,7 +869,7 @@ const Dashboard = () => {
                       onChange={(e) => setSwapAmount(e.target.value)}
                       type="number"
                       placeholder="0.00"
-                      className="w-full appearance-none bg-[linear-gradient(145deg,rgba(255,255,255,0.22),rgba(255,255,255,0.05))] border border-white/20 rounded-[14px] px-4 py-4 pr-12 text-white text-[15px] backdrop-blur-[18px] focus:outline-none focus:border-blue-500 focus:shadow-[0_0_14px_rgba(59,130,246,0.35)]"
+                      className="w-full appearance-none rounded-[14px] px-4 py-4 pr-12 bg-[#0b1220]/85 border border-white/15 text-white placeholder:text-slate-500 text-[16px] backdrop-blur-[18px] focus:outline-none focus:border-blue-500 focus:shadow-[0_0_14px_rgba(59,130,246,0.35)]"
                     />
                     <div className="absolute right-3 top-1/2 -translate-y-1/2 flex flex-col text-[10px] gap-[2px]">
                       <button type="button" onClick={() => setSwapAmount(String((parseFloat(swapAmount) || 0) + 1))} className="opacity-70 hover:opacity-100 hover:text-blue-400 transition">▲</button>
@@ -874,21 +880,24 @@ const Dashboard = () => {
                   {swapInsufficient && <div className="text-red-500 text-[12px] mt-2">Not enough available balance</div>}
                 </div>
 
-                <div className="flex justify-center my-4">
-                  <button onClick={handleSwapDirection} className={`w-[42px] h-[42px] rounded-[12px] border border-white/20 bg-[linear-gradient(145deg,rgba(255,255,255,.12),rgba(255,255,255,.02))] hover:bg-blue-500/25 text-white flex items-center justify-center transition-all hover:rotate-180 ${buttonFx}`}>
+                <div className="flex justify-center my-5">
+                  <button
+                    onClick={handleSwapDirection}
+                    className={`w-[48px] h-[48px] rounded-[14px] border border-white/20 bg-[linear-gradient(145deg,rgba(255,255,255,.12),rgba(255,255,255,.02))] hover:bg-blue-500/25 text-white flex items-center justify-center transition-all hover:rotate-180 ${buttonFx}`}
+                  >
                     <ArrowLeftRight size={18} className="relative z-10" />
                   </button>
                 </div>
 
                 <div className="mb-5">
                   <span className="text-[12px] uppercase tracking-[1px] text-slate-400 mb-2 block">Receive Asset</span>
-                  <div className="flex gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     {assets.map((coin) => (
                       <button
                         key={coin}
                         onClick={() => handleSwapToChange(coin)}
                         disabled={coin === swapFrom}
-                        className={`flex-1 border rounded-[14px] px-3 py-3 flex items-center gap-3 transition-all relative overflow-hidden ${
+                        className={`border rounded-[14px] px-3 py-4 flex items-center justify-center gap-3 transition-all relative overflow-hidden ${
                           coin === swapTo
                             ? 'border-blue-500 bg-blue-500/20 shadow-[0_0_12px_rgba(59,130,246,0.35)]'
                             : coin === swapFrom
@@ -904,21 +913,27 @@ const Dashboard = () => {
                 </div>
 
                 <div className="mt-5 border-t border-white/15 pt-5 space-y-2">
-                  <div className="flex justify-between text-[14px] text-slate-400">
+                  <div className="flex justify-between text-[14px] text-slate-400 gap-4">
                     <span>Swap Rate</span>
-                    <span className="text-white">1 {swapFrom} = {swapRate ? swapRate.toFixed(6) : '0.000000'} {swapTo}</span>
+                    <span className="text-white text-right break-all">1 {swapFrom} = {swapRate ? swapRate.toFixed(6) : '0.000000'} {swapTo}</span>
                   </div>
-                  <div className="flex justify-between text-[14px] text-slate-400">
+                  <div className="flex justify-between text-[14px] text-slate-400 gap-4">
                     <span>Swap Fee</span>
                     <span className="text-white">0.001%</span>
                   </div>
-                  <div className="flex justify-between text-[17px] mt-3 text-slate-300">
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center text-[17px] mt-3 text-slate-300 gap-1">
                     <span>Estimated Receive</span>
-                    <span className="text-blue-400 font-semibold">{estimatedReceive.toFixed(6)} {swapTo}</span>
+                    <span className="text-blue-400 font-semibold break-all sm:text-right">
+                      {estimatedReceive.toFixed(6)} {swapTo}
+                    </span>
                   </div>
                 </div>
 
-                <button onClick={executeSwap} disabled={!swapAmount || swapInsufficient} className={`mt-6 w-full py-4 rounded-[14px] font-semibold text-[15px] bg-gradient-to-br from-blue-500 to-blue-700 text-white hover:-translate-y-[2px] hover:shadow-[0_10px_30px_rgba(59,130,246,0.45)] disabled:opacity-40 disabled:pointer-events-none ${buttonFx}`}>
+                <button
+                  onClick={executeSwap}
+                  disabled={!swapAmount || swapInsufficient}
+                  className={`mt-6 w-full py-4 rounded-[14px] font-semibold text-[15px] bg-gradient-to-br from-blue-500 to-blue-700 text-white hover:-translate-y-[2px] hover:shadow-[0_10px_30px_rgba(59,130,246,0.45)] disabled:opacity-40 disabled:pointer-events-none ${buttonFx}`}
+                >
                   <span className="relative z-10">Confirm Swap</span>
                 </button>
               </div>
@@ -944,31 +959,31 @@ const Dashboard = () => {
       )}
 
       {showWithdraw && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4">
           <div className="absolute inset-0 bg-[#030712]/92 backdrop-blur-xl" />
-          <div className="relative w-full max-w-[540px] bg-[linear-gradient(145deg,rgba(255,255,255,0.14),rgba(255,255,255,0.03))] border border-white/20 rounded-[26px] backdrop-blur-[32px] p-8 shadow-[0_24px_70px_rgba(0,0,0,0.55)] overflow-hidden">
+          <div className="relative w-full max-w-[540px] max-h-[92vh] overflow-y-auto bg-[linear-gradient(145deg,rgba(255,255,255,0.14),rgba(255,255,255,0.03))] border border-white/20 rounded-[26px] backdrop-blur-[32px] p-5 sm:p-6 md:p-8 shadow-[0_24px_70px_rgba(0,0,0,0.55)]">
             <div className="absolute top-[-80px] left-[-80px] w-[220px] h-[220px] bg-blue-500/10 blur-[70px] rounded-full" />
-            <button onClick={() => { setShowWithdraw(false); setWdStep(1); setWdTimelineStep(0); }} className={`absolute top-5 right-5 w-11 h-11 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 flex items-center justify-center ${buttonFx}`}>
+            <button onClick={() => { setShowWithdraw(false); setWdStep(1); setWdTimelineStep(0); }} className={`absolute top-4 right-4 sm:top-5 sm:right-5 w-11 h-11 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 flex items-center justify-center ${buttonFx}`}>
               <X size={18} className="relative z-10" />
             </button>
 
             {wdStep === 1 ? (
               <div className="relative z-10">
-                <div className="flex justify-between items-center mb-7">
-                  <div className="text-2xl font-semibold">Withdraw Crypto</div>
-                  <div className="text-[13px] text-slate-400">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-7 gap-3 pr-12">
+                  <div className="text-xl sm:text-2xl font-semibold">Withdraw Crypto</div>
+                  <div className="text-[13px] text-slate-400 sm:text-right">
                     Portfolio Balance: <b className="text-white">{wdAvailable.toFixed(6)} {wdCoin}</b>
                   </div>
                 </div>
 
                 <div className="mb-6">
                   <span className="text-[12px] uppercase tracking-[1px] text-slate-400 mb-2 block">Select Asset</span>
-                  <div className="flex gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     {assets.map((coin) => (
                       <button
                         key={coin}
                         onClick={() => setWdCoin(coin)}
-                        className={`flex-1 border rounded-[14px] px-3 py-3 flex items-center gap-3 transition-all ${
+                        className={`border rounded-[14px] px-3 py-4 flex items-center justify-center gap-3 transition-all ${
                           wdCoin === coin
                             ? 'border-blue-500 bg-blue-500/20 shadow-[0_0_12px_rgba(59,130,246,0.35)]'
                             : 'border-white/20 bg-[linear-gradient(135deg,rgba(255,255,255,.06),rgba(255,255,255,.01))] hover:border-blue-500 hover:bg-blue-500/10'
@@ -983,7 +998,11 @@ const Dashboard = () => {
 
                 <div className="mb-6">
                   <span className="text-[12px] uppercase tracking-[1px] text-slate-400 mb-2 block">Network</span>
-                  <select value={wdNetwork} onChange={(e) => setWdNetwork(e.target.value)} className="w-full bg-[linear-gradient(145deg,rgba(255,255,255,0.22),rgba(255,255,255,0.05))] border border-white/20 rounded-[14px] px-4 py-4 text-white text-[14px] backdrop-blur-[18px] focus:outline-none focus:border-blue-500 focus:shadow-[0_0_14px_rgba(59,130,246,0.35)]">
+                  <select
+                    value={wdNetwork}
+                    onChange={(e) => setWdNetwork(e.target.value)}
+                    className="w-full rounded-[14px] px-4 py-4 bg-[#0b1220]/85 border border-white/15 text-white text-[14px] backdrop-blur-[18px] focus:outline-none focus:border-blue-500 focus:shadow-[0_0_14px_rgba(59,130,246,0.35)]"
+                  >
                     {(withdrawNetworks[wdCoin] || []).map((network) => (
                       <option key={network} value={network} className="bg-slate-900">{network}</option>
                     ))}
@@ -992,9 +1011,15 @@ const Dashboard = () => {
 
                 <div className="mb-6">
                   <span className="text-[12px] uppercase tracking-[1px] text-slate-400 mb-2 block">Destination Address</span>
-                  <div className="flex gap-3">
-                    <input value={wdAddress} onChange={(e) => setWdAddress(e.target.value)} placeholder="0x3f4... wallet address" spellCheck={false} className="flex-1 bg-[linear-gradient(145deg,rgba(255,255,255,0.22),rgba(255,255,255,0.05))] border border-white/20 rounded-[14px] px-4 py-4 text-white text-[14px] backdrop-blur-[18px] focus:outline-none focus:border-blue-500 focus:shadow-[0_0_14px_rgba(59,130,246,0.35)]" />
-                    <button onClick={handlePasteAddress} className={`px-4 rounded-[12px] border border-white/20 bg-[linear-gradient(135deg,rgba(255,255,255,.08),rgba(255,255,255,.02))] hover:border-blue-500 text-white ${buttonFx}`}>
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <input
+                      value={wdAddress}
+                      onChange={(e) => setWdAddress(e.target.value)}
+                      placeholder="0x3f4... wallet address"
+                      spellCheck={false}
+                      className="flex-1 rounded-[14px] px-4 py-4 bg-[#0b1220]/85 border border-white/15 text-white placeholder:text-slate-500 text-[14px] backdrop-blur-[18px] focus:outline-none focus:border-blue-500 focus:shadow-[0_0_14px_rgba(59,130,246,0.35)]"
+                    />
+                    <button onClick={handlePasteAddress} className={`px-4 py-4 rounded-[12px] border border-white/20 bg-[linear-gradient(135deg,rgba(255,255,255,.08),rgba(255,255,255,.02))] hover:border-blue-500 text-white ${buttonFx}`}>
                       <span className="relative z-10">Paste</span>
                     </button>
                   </div>
@@ -1003,14 +1028,21 @@ const Dashboard = () => {
                 <div className="mb-5">
                   <span className="text-[12px] uppercase tracking-[1px] text-slate-400 mb-2 block">Amount</span>
                   <div className="relative">
-                    <input value={wdAmount} onChange={(e) => setWdAmount(e.target.value)} type="number" step="0.01" placeholder={`0.00 ${wdCoin}`} className="w-full appearance-none bg-[linear-gradient(145deg,rgba(255,255,255,0.22),rgba(255,255,255,0.05))] border border-white/20 rounded-[14px] px-4 py-4 pr-12 text-white text-[15px] backdrop-blur-[18px] focus:outline-none focus:border-blue-500 focus:shadow-[0_0_14px_rgba(59,130,246,0.35)]" />
+                    <input
+                      value={wdAmount}
+                      onChange={(e) => setWdAmount(e.target.value)}
+                      type="number"
+                      step="0.01"
+                      placeholder={`0.00 ${wdCoin}`}
+                      className="w-full appearance-none rounded-[14px] px-4 py-4 pr-12 bg-[#0b1220]/85 border border-white/15 text-white placeholder:text-slate-500 text-[15px] backdrop-blur-[18px] focus:outline-none focus:border-blue-500 focus:shadow-[0_0_14px_rgba(59,130,246,0.35)]"
+                    />
                     <div className="absolute right-2 top-2 bottom-2 flex flex-col">
                       <button type="button" onClick={() => setWdAmount(String((parseFloat(wdAmount) || 0) + 1))} className="flex-1 w-[26px] text-[10px] rounded-md bg-[linear-gradient(145deg,rgba(255,255,255,.18),rgba(255,255,255,.05))] hover:bg-blue-500/35">▲</button>
                       <button type="button" onClick={() => setWdAmount(String(Math.max(0, (parseFloat(wdAmount) || 0) - 1)))} className="flex-1 w-[26px] text-[10px] mt-[2px] rounded-md bg-[linear-gradient(145deg,rgba(255,255,255,.18),rgba(255,255,255,.05))] hover:bg-blue-500/35">▼</button>
                     </div>
                   </div>
 
-                  <div className="flex justify-between text-[12px] text-slate-400 mt-2">
+                  <div className="flex justify-between text-[12px] text-slate-400 mt-2 gap-3">
                     <span>Available: {wdAvailable.toFixed(6)} {wdCoin}</span>
                     <button onClick={() => setWdAmount(String(wdAvailable))} className="text-blue-400 hover:text-blue-300">MAX</button>
                   </div>
@@ -1020,21 +1052,21 @@ const Dashboard = () => {
                 </div>
 
                 <div className="mt-5 border-t border-white/15 pt-5 space-y-2">
-                  <div className="flex justify-between text-[14px] text-slate-400">
+                  <div className="flex justify-between text-[14px] text-slate-400 gap-4">
                     <span>Network Fee</span>
-                    <span className="text-white">{wdFeeInCrypto.toFixed(6)} {wdCoin}</span>
+                    <span className="text-white break-all text-right">{wdFeeInCrypto.toFixed(6)} {wdCoin}</span>
                   </div>
-                  <div className="flex justify-between text-[14px] text-slate-400">
+                  <div className="flex justify-between text-[14px] text-slate-400 gap-4">
                     <span>Processing by Exchange Time</span>
                     <span className="text-white">~3 Minutes</span>
                   </div>
-                  <div className="flex justify-between text-[14px] text-slate-400">
+                  <div className="flex justify-between text-[14px] text-slate-400 gap-4">
                     <span>Minimum Withdrawal</span>
                     <span className="text-white">{wdMinimum} {wdCoin}</span>
                   </div>
-                  <div className="flex justify-between text-[17px] mt-3 text-slate-300">
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center text-[17px] mt-3 text-slate-300 gap-1">
                     <span>Total to Receive</span>
-                    <span className="text-blue-400 font-semibold">{wdReceiveTotal.toFixed(6)} {wdCoin}</span>
+                    <span className="text-blue-400 font-semibold break-all sm:text-right">{wdReceiveTotal.toFixed(6)} {wdCoin}</span>
                   </div>
                 </div>
 
@@ -1070,7 +1102,7 @@ const Dashboard = () => {
                   Withdrawal passed verification and is now pending on the blockchain network.
                 </p>
 
-                <div className="flex gap-3 mt-6">
+                <div className="flex flex-col sm:flex-row gap-3 mt-6">
                   <button onClick={resetWithdrawFlow} className={`flex-1 py-4 rounded-[14px] font-semibold text-[15px] bg-gradient-to-br from-blue-500 to-blue-700 text-white hover:-translate-y-[2px] hover:shadow-[0_10px_30px_rgba(59,130,246,0.45)] ${buttonFx}`}>
                     <span className="relative z-10">Make Another Transaction</span>
                   </button>
@@ -1085,28 +1117,28 @@ const Dashboard = () => {
       )}
 
       {showReceive && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4">
           <div className="absolute inset-0 bg-[#030712]/92 backdrop-blur-xl" />
-          <div className="relative w-full max-w-[540px] bg-[linear-gradient(145deg,rgba(255,255,255,0.14),rgba(255,255,255,0.03))] border border-white/20 rounded-[26px] backdrop-blur-[32px] p-8 shadow-[0_24px_70px_rgba(0,0,0,0.55)] overflow-hidden">
+          <div className="relative w-full max-w-[540px] max-h-[92vh] overflow-y-auto bg-[linear-gradient(145deg,rgba(255,255,255,0.14),rgba(255,255,255,0.03))] border border-white/20 rounded-[26px] backdrop-blur-[32px] p-5 sm:p-6 md:p-8 shadow-[0_24px_70px_rgba(0,0,0,0.55)]">
             <div className="absolute top-[-80px] left-[-80px] w-[220px] h-[220px] bg-blue-500/10 blur-[70px] rounded-full" />
-            <button onClick={() => setShowReceive(false)} className={`absolute top-5 right-5 w-11 h-11 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 flex items-center justify-center ${buttonFx}`}>
+            <button onClick={() => setShowReceive(false)} className={`absolute top-4 right-4 sm:top-5 sm:right-5 w-11 h-11 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 flex items-center justify-center ${buttonFx}`}>
               <X size={18} className="relative z-10" />
             </button>
 
             <div className="relative z-10">
-              <div className="flex justify-between items-center mb-7">
-                <div className="text-2xl font-semibold">Receive Crypto</div>
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-7 gap-3 pr-12">
+                <div className="text-xl sm:text-2xl font-semibold">Receive Crypto</div>
                 <div className="text-[13px] text-slate-400">Select an asset to receive</div>
               </div>
 
               <div className="mb-6">
                 <span className="text-[12px] uppercase tracking-[1px] text-slate-400 mb-2 block">Select Asset</span>
-                <div className="flex gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   {assets.map((coin) => (
                     <button
                       key={coin}
                       onClick={() => setReceiveCoin(coin)}
-                      className={`flex-1 border rounded-[14px] px-3 py-3 flex items-center gap-3 transition-all ${
+                      className={`border rounded-[14px] px-3 py-4 flex items-center justify-center gap-3 transition-all ${
                         receiveCoin === coin
                           ? 'border-blue-500 bg-blue-500/20 shadow-[0_0_12px_rgba(59,130,246,0.35)]'
                           : 'border-white/20 bg-[linear-gradient(135deg,rgba(255,255,255,.06),rgba(255,255,255,.01))] hover:border-blue-500 hover:bg-blue-500/10'
@@ -1121,7 +1153,7 @@ const Dashboard = () => {
 
               <div className="mb-6">
                 <span className="text-[12px] uppercase tracking-[1px] text-slate-400 mb-2 block">Wallet Address</span>
-                <div className="rounded-[16px] border border-white/20 bg-[linear-gradient(145deg,rgba(255,255,255,0.16),rgba(255,255,255,0.04))] px-4 py-4 min-h-[64px] flex items-center justify-between gap-3">
+                <div className="rounded-[16px] border border-white/20 bg-[#0b1220]/75 px-4 py-4 min-h-[64px] flex items-center justify-between gap-3">
                   <div className="text-[14px] text-slate-300 break-all">
                     {selectedDepositAddress || 'Waiting for address generation'}
                   </div>
@@ -1141,7 +1173,7 @@ const Dashboard = () => {
                   {waitingForGeneration ? (
                     <>
                       <div className="w-[120px] h-[120px] rounded-[20px] border border-dashed border-white/20 bg-white/5 flex items-center justify-center mb-4">
-                        <Wallet size={40} className="opacity-40" />
+                        <QrCode size={40} className="opacity-40" />
                       </div>
                       <div className="text-sm font-medium text-slate-300">Waiting for address generation</div>
                       <div className="text-[12px] text-slate-400 mt-2 text-center max-w-[280px]">
@@ -1168,7 +1200,7 @@ const Dashboard = () => {
       )}
 
       {showNotifs && (
-        <div className="fixed top-24 right-6 w-full max-w-[360px] z-[60] rounded-[28px] border border-white/10 bg-[#0b1220]/95 backdrop-blur-xl p-5 shadow-[0_12px_40px_rgba(0,0,0,0.28)]">
+        <div className="fixed top-24 right-4 sm:right-6 w-[calc(100%-2rem)] sm:w-full max-w-[360px] z-[60] rounded-[28px] border border-white/10 bg-[#0b1220]/95 backdrop-blur-xl p-5 shadow-[0_12px_40px_rgba(0,0,0,0.28)]">
           <div className="flex items-center justify-between mb-5">
             <div className="text-[10px] uppercase tracking-[0.28em] opacity-35 font-black">
               System alerts
