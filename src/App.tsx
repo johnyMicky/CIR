@@ -30,7 +30,8 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import History from './pages/History';
-import MyWallets from './pages/MyWallets'; // <-- ახალი იმპორტი
+import MyWallets from './pages/MyWallets';
+import AppShell from './components/AppShell';
 
 import AdminRoute from './components/AdminRoute';
 import AdminLayout from './admin/components/AdminLayout';
@@ -770,10 +771,14 @@ function App() {
 
       <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <Login />} />
       <Route path="/register" element={user ? <Navigate to="/dashboard" replace /> : <Register />} />
-      <Route path="/dashboard" element={user ? <Dashboard /> : <Navigate to="/login" replace />} />
-      <Route path="/my-wallets" element={user ? <MyWallets /> : <Navigate to="/login" replace />} />
-      
-      <Route path="/history" element={user ? <History /> : <Navigate to="/login" replace />} />
+
+      <Route
+        element={user ? <AppShell /> : <Navigate to="/login" replace />}
+      >
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/my-wallets" element={<MyWallets />} />
+        <Route path="/history" element={<History />} />
+      </Route>
 
       <Route
         path="/admin/login"
