@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useOutletContext } from "react-router-dom";
+import { onAuthStateChanged } from "firebase/auth";
+import { onValue, ref } from "firebase/database";
 import {
   ArrowDownLeft,
   ArrowUpRight,
@@ -11,7 +13,10 @@ import {
   Download,
   Clock3,
   XCircle,
+  Send,
 } from "lucide-react";
+
+import { auth, db } from "../firebase";
 
 type ShellContext = {
   showBalance: boolean;
@@ -19,7 +24,7 @@ type ShellContext = {
   globalSearch: string;
 };
 
-type TxStatus = "Pending" | "Completed" | "Failed";
+type TxStatus = "Pending" | "Completed" | "Failed" | "Rejected";
 type TxType = "Receive" | "Withdraw" | "Transfer" | "Deposit" | "Swap";
 
 type Transaction = {
@@ -33,6 +38,20 @@ type Transaction = {
   network?: string;
   from?: string;
   to?: string;
+  note?: string;
+  createdAt?: number;
+};
+
+type FirebaseTransaction = {
+  id?: string;
+  type?: string;
+  asset?: string;
+  amount?: number | string;
+  status?: string;
+  createdAt?: number;
+  createdAtLabel?: string;
+  walletAddress?: string;
+  recipient?: string;
   note?: string;
 };
 
@@ -74,140 +93,42 @@ const transactionSeed: Transaction[] = [
     from: "0x9843bafA7614b0D122281B6C1a3B7A2b98AC1234",
     note: "Incoming deposit",
   },
-  {
-    id: "TX-20510",
-    type: "Transfer",
-    asset: "SOL",
-    amount: 3.2,
-    usdValue: 612.18,
-    status: "Completed",
-    date: "2026-03-14 12:17",
-    network: "Internal",
-    to: "client@axcelci.com",
-    note: "Internal transfer",
-  },
-  {
-    id: "TX-20499",
-    type: "Withdraw",
-    asset: "BTC",
-    amount: 0.021,
-    usdValue: 1425.73,
-    status: "Failed",
-    date: "2026-03-14 10:58",
-    network: "Bitcoin",
-    to: "bc1q8h6xylx6zz7x8n0d0w4x3v7q4v8h5m4d3v2u1e",
-    note: "Address validation failed",
-  },
-  {
-    id: "TX-20491",
-    type: "Receive",
-    asset: "BTC",
-    amount: 0.0215,
-    usdValue: 1458.65,
-    status: "Completed",
-    date: "2026-03-13 20:16",
-    network: "Bitcoin",
-    from: "bc1q4l8t2j8p8x9v2w7l6m3n4q2e8t0d8x7v5r2k9u",
-    note: "Incoming deposit",
-  },
-  {
-    id: "TX-20488",
-    type: "Withdraw",
-    asset: "USDT",
-    amount: 800,
-    usdValue: 800,
-    status: "Pending",
-    date: "2026-03-13 18:52",
-    network: "ERC20",
-    to: "0x2e4F5A8f8bB77F7f6D2A1c4bA9cD781234567890",
-    note: "Awaiting processing",
-  },
-  {
-    id: "TX-20480",
-    type: "Deposit",
-    asset: "ETH",
-    amount: 0.85,
-    usdValue: 2860.4,
-    status: "Completed",
-    date: "2026-03-13 17:11",
-    network: "ERC20",
-    from: "0xB1C8A4e9B12d4a34FdC781234567890AbCdE1234",
-    note: "Wallet deposit confirmed",
-  },
-  {
-    id: "TX-20472",
-    type: "Transfer",
-    asset: "SOL",
-    amount: 5,
-    usdValue: 954.6,
-    status: "Failed",
-    date: "2026-03-13 14:08",
-    network: "Internal",
-    to: "m.carter@axcelci.com",
-    note: "Recipient account unavailable",
-  },
-  {
-    id: "TX-20463",
-    type: "Swap",
-    asset: "BNB",
-    amount: 1.1,
-    usdValue: 688.24,
-    status: "Completed",
-    date: "2026-03-13 11:44",
-    network: "Internal",
-    from: "USDT",
-    to: "BNB",
-    note: "Converted USDT to BNB",
-  },
-  {
-    id: "TX-20451",
-    type: "Receive",
-    asset: "USDT",
-    amount: 1200,
-    usdValue: 1200,
-    status: "Completed",
-    date: "2026-03-13 09:05",
-    network: "TRC20",
-    from: "TRm3QfRwwT8VYxDf1e8z6Q4g8h9u1a2c3d",
-    note: "Deposit received",
-  },
-  {
-    id: "TX-20440",
-    type: "Withdraw",
-    asset: "BNB",
-    amount: 0.65,
-    usdValue: 406.98,
-    status: "Completed",
-    date: "2026-03-12 22:19",
-    network: "BEP20",
-    to: "bnb1kax3c4n8g7h2l9m0p5r3t7y2u4w6x8z1d0f9s",
-    note: "Completed payout",
-  },
-  {
-    id: "TX-20431",
-    type: "Deposit",
-    asset: "SOL",
-    amount: 7.5,
-    usdValue: 1431.9,
-    status: "Completed",
-    date: "2026-03-12 19:26",
-    network: "Solana",
-    from: "4vJ9JU1bJJE96FWSz5z6Xx4m8jX2G2o4x5g6f7h8j9k",
-    note: "Deposit confirmed",
-  },
-  {
-    id: "TX-20418",
-    type: "Transfer",
-    asset: "USDT",
-    amount: 250,
-    usdValue: 250,
-    status: "Pending",
-    date: "2026-03-12 16:01",
-    network: "Internal",
-    to: "ops-client@axcelci.com",
-    note: "Internal move pending",
-  },
 ];
+
+const toNumber = (value: unknown) => {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : 0;
+};
+
+const normalizeType = (type?: string): TxType => {
+  const value = (type || "").toLowerCase();
+
+  if (value === "deposit") return "Deposit";
+  if (value === "withdraw") return "Withdraw";
+  if (value === "transfer") return "Transfer";
+  if (value === "swap") return "Swap";
+  if (value === "receive") return "Receive";
+
+  return "Deposit";
+};
+
+const normalizeStatus = (status?: string): TxStatus => {
+  const value = (status || "").toLowerCase();
+
+  if (value === "completed") return "Completed";
+  if (value === "failed") return "Failed";
+  if (value === "rejected") return "Rejected";
+  if (value === "pending") return "Pending";
+
+  return "Pending";
+};
+
+const formatDateLabel = (timestamp?: number, fallback?: string) => {
+  if (timestamp && Number.isFinite(timestamp)) {
+    return new Date(timestamp).toLocaleString();
+  }
+  return fallback || "—";
+};
 
 const History = () => {
   const { showBalance, globalSearch } = useOutletContext<ShellContext>();
@@ -216,6 +137,9 @@ const History = () => {
   const [typeFilter, setTypeFilter] = useState<"All" | TxType>("All");
   const [statusFilter, setStatusFilter] = useState<"All" | TxStatus>("All");
   const [copiedTxId, setCopiedTxId] = useState("");
+  const [userId, setUserId] = useState("");
+  const [loadingTransactions, setLoadingTransactions] = useState(true);
+  const [firebaseTransactions, setFirebaseTransactions] = useState<Transaction[]>([]);
 
   useEffect(() => {
     if (!toast) return;
@@ -223,7 +147,74 @@ const History = () => {
     return () => clearTimeout(timer);
   }, [toast]);
 
-  const transactions = useMemo(() => transactionSeed, []);
+  useEffect(() => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
+      if (!firebaseUser) {
+        setUserId("");
+        setFirebaseTransactions([]);
+        setLoadingTransactions(false);
+        return;
+      }
+
+      setUserId(firebaseUser.uid);
+      setLoadingTransactions(true);
+
+      const txRef = ref(db, `transactions/${firebaseUser.uid}`);
+      const unsubscribeValue = onValue(
+        txRef,
+        (snapshot) => {
+          const raw = snapshot.val() || {};
+          const rows: Transaction[] = Object.entries(raw).map(([key, value]) => {
+            const tx = (value || {}) as FirebaseTransaction;
+            const amount = toNumber(tx.amount);
+            const type = normalizeType(tx.type);
+            const status = normalizeStatus(tx.status);
+
+            return {
+              id: String(tx.id || key),
+              type,
+              asset: String(tx.asset || ""),
+              amount,
+              usdValue: 0,
+              status,
+              date: formatDateLabel(tx.createdAt, tx.createdAtLabel),
+              network:
+                type === "Transfer"
+                  ? "Internal"
+                  : type === "Withdraw"
+                  ? "External"
+                  : type === "Deposit"
+                  ? "Deposit"
+                  : "Internal",
+              from: type === "Deposit" ? "Client Request" : "",
+              to: tx.recipient || tx.walletAddress || "",
+              note: tx.note || "",
+              createdAt: tx.createdAt || 0,
+            };
+          });
+
+          rows.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
+          setFirebaseTransactions(rows);
+          setLoadingTransactions(false);
+        },
+        (error) => {
+          console.error("History transactions fetch error:", error);
+          setFirebaseTransactions([]);
+          setLoadingTransactions(false);
+        }
+      );
+
+      return unsubscribeValue;
+    });
+
+    return () => unsubscribeAuth();
+  }, []);
+
+  const transactions = useMemo(() => {
+    if (firebaseTransactions.length > 0) return firebaseTransactions;
+    return transactionSeed;
+  }, [firebaseTransactions]);
 
   const filteredTransactions = useMemo(() => {
     let rows = transactions;
@@ -257,7 +248,9 @@ const History = () => {
   const stats = useMemo(() => {
     const completed = filteredTransactions.filter((tx) => tx.status === "Completed").length;
     const pending = filteredTransactions.filter((tx) => tx.status === "Pending").length;
-    const failed = filteredTransactions.filter((tx) => tx.status === "Failed").length;
+    const failed = filteredTransactions.filter(
+      (tx) => tx.status === "Failed" || tx.status === "Rejected"
+    ).length;
     const totalValue = filteredTransactions.reduce((sum, tx) => sum + tx.usdValue, 0);
 
     return { completed, pending, failed, totalValue };
@@ -340,6 +333,9 @@ const History = () => {
     if (type === "Receive" || type === "Deposit") {
       return <ArrowDownLeft className="h-4 w-4 text-emerald-400" />;
     }
+    if (type === "Transfer") {
+      return <Send className="h-4 w-4 text-sky-400" />;
+    }
     return <ArrowUpRight className="h-4 w-4 text-sky-400" />;
   };
 
@@ -408,7 +404,9 @@ const History = () => {
           <div className="mt-3 text-3xl font-semibold tabular-nums">
             {showBalance ? formatMoney(stats.totalValue) : "••••••"}
           </div>
-          <div className="mt-2 text-sm text-slate-400">Combined filtered volume</div>
+          <div className="mt-2 text-sm text-slate-400">
+            {userId ? "Combined filtered volume" : "Using local fallback data"}
+          </div>
         </div>
       </div>
 
@@ -449,6 +447,7 @@ const History = () => {
                 <option value="Completed" className="bg-slate-900">Completed</option>
                 <option value="Pending" className="bg-slate-900">Pending</option>
                 <option value="Failed" className="bg-slate-900">Failed</option>
+                <option value="Rejected" className="bg-slate-900">Rejected</option>
               </select>
             </div>
 
@@ -544,9 +543,15 @@ const History = () => {
               ))}
             </div>
 
-            {filteredTransactions.length === 0 && (
+            {!loadingTransactions && filteredTransactions.length === 0 && (
               <div className="rounded-3xl bg-white/5 px-4 py-8 text-center text-sm text-slate-400 ring-1 ring-white/8">
                 No transactions found for current filters.
+              </div>
+            )}
+
+            {loadingTransactions && (
+              <div className="rounded-3xl bg-white/5 px-4 py-8 text-center text-sm text-slate-400 ring-1 ring-white/8">
+                Loading transactions...
               </div>
             )}
           </div>
@@ -634,9 +639,15 @@ const History = () => {
           </div>
         ))}
 
-        {filteredTransactions.length === 0 && (
+        {!loadingTransactions && filteredTransactions.length === 0 && (
           <div className="rounded-[28px] border border-white/10 bg-white/5 p-8 text-center text-sm text-slate-400 backdrop-blur-xl">
             No transactions found for current filters.
+          </div>
+        )}
+
+        {loadingTransactions && (
+          <div className="rounded-[28px] border border-white/10 bg-white/5 p-8 text-center text-sm text-slate-400 backdrop-blur-xl">
+            Loading transactions...
           </div>
         )}
       </section>
