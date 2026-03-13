@@ -29,6 +29,7 @@ import { useAuth } from './context/AuthContext';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
+import History from './pages/History'; // <-- ახალი იმპორტი
 
 import AdminRoute from './components/AdminRoute';
 import AdminLayout from './admin/components/AdminLayout';
@@ -770,6 +771,9 @@ function App() {
       <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <Login />} />
       <Route path="/register" element={user ? <Navigate to="/dashboard" replace /> : <Register />} />
       <Route path="/dashboard" element={user ? <Dashboard /> : <Navigate to="/login" replace />} />
+      
+      {/* ახალი History როუტი */}
+      <Route path="/history" element={user ? <History /> : <Navigate to="/login" replace />} />
 
       <Route
         path="/admin/login"
