@@ -40,7 +40,7 @@ const AppShell = () => {
     { key: "dashboard", label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
     { key: "wallets", label: "My Wallets", icon: Wallet, path: "/my-wallets" },
     { key: "send_receive", label: "Send / Receive", icon: ArrowUpDown, path: "/send-receive" },
-    { key: "swap", label: "Exchange / Swap", icon: RefreshCw },
+    { key: "swap", label: "Exchange / Swap", icon: RefreshCw, path: "/exchange" },
     { key: "history", label: "Transactions History", icon: History, path: "/history" },
     { key: "settings", label: "Settings", icon: Settings },
     { key: "support", label: "Support / Help", icon: LifeBuoy },
@@ -50,6 +50,7 @@ const AppShell = () => {
     if (location.pathname.startsWith("/my-wallets")) return "wallets";
     if (location.pathname.startsWith("/send-receive")) return "send_receive";
     if (location.pathname.startsWith("/history")) return "history";
+    if (location.pathname.startsWith("/exchange")) return "swap";
     if (location.pathname.startsWith("/dashboard")) return "dashboard";
     return "dashboard";
   }, [location.pathname]);
