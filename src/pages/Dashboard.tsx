@@ -15,6 +15,8 @@ import {
   History,
   RefreshCw,
   ArrowDownUp,
+  Clock3,
+  XCircle,
 } from "lucide-react";
 
 import { auth, db } from "../firebase";
@@ -36,8 +38,8 @@ type PortfolioAsset = {
   locked?: number;
 };
 
-type TxStatus = "Pending" | "Completed" | "Failed";
-type TxType = "Receive" | "Withdraw" | "Transfer" | "Deposit";
+type TxStatus = "Pending" | "Completed" | "Failed" | "Rejected";
+type TxType = "Receive" | "Withdraw" | "Transfer" | "Deposit" | "Swap";
 
 type Transaction = {
   id: string;
@@ -47,6 +49,7 @@ type Transaction = {
   usdValue: number;
   status: TxStatus;
   date: string;
+  createdAt?: number;
 };
 
 type ShellContext = {
@@ -62,6 +65,16 @@ type UserWalletData = {
   usdt_balance?: number | string;
 };
 
+type FirebaseTransaction = {
+  id?: string;
+  type?: string;
+  asset?: string;
+  amount?: number | string;
+  status?: string;
+  createdAt?: number;
+  createdAtLabel?: string;
+};
+
 const ASSET_META = [
   { id: "bitcoin", symbol: "BTC", name: "Bitcoin" },
   { id: "ethereum", symbol: "ETH", name: "Ethereum" },
@@ -75,6 +88,36 @@ const toNumber = (value: unknown) => {
   return Number.isFinite(num) ? num : 0;
 };
 
+const normalizeType = (type?: string): TxType => {
+  const value = (type || "").toLowerCase();
+
+  if (value === "deposit") return "Deposit";
+  if (value === "withdraw") return "Withdraw";
+  if (value === "transfer") return "Transfer";
+  if (value === "swap") return "Swap";
+  if (value === "receive") return "Receive";
+
+  return "Deposit";
+};
+
+const normalizeStatus = (status?: string): TxStatus => {
+  const value = (status || "").toLowerCase();
+
+  if (value === "completed") return "Completed";
+  if (value === "failed") return "Failed";
+  if (value === "rejected") return "Rejected";
+  if (value === "pending") return "Pending";
+
+  return "Pending";
+};
+
+const formatDateLabel = (timestamp?: number, fallback?: string) => {
+  if (timestamp && Number.isFinite(timestamp)) {
+    return new Date(timestamp).toLocaleString();
+  }
+  return fallback || "—";
+};
+
 const Dashboard = () => {
   const navigate = useNavigate();
   const { showBalance, globalSearch } = useOutletContext<ShellContext>();
@@ -82,9 +125,11 @@ const Dashboard = () => {
   const [market, setMarket] = useState<MarketCoin[]>([]);
   const [loadingMarket, setLoadingMarket] = useState(true);
   const [loadingWallets, setLoadingWallets] = useState(true);
+  const [loadingTransactions, setLoadingTransactions] = useState(true);
   const [copiedTxId, setCopiedTxId] = useState("");
   const [toast, setToast] = useState("");
   const [walletSource, setWalletSource] = useState<UserWalletData>({});
+  const [firebaseTransactions, setFirebaseTransactions] = useState<Transaction[]>([]);
 
   useEffect(() => {
     const fetchMarket = async () => {
@@ -118,14 +163,19 @@ const Dashboard = () => {
     const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
       if (!firebaseUser) {
         setWalletSource({});
+        setFirebaseTransactions([]);
         setLoadingWallets(false);
+        setLoadingTransactions(false);
         return;
       }
 
       setLoadingWallets(true);
+      setLoadingTransactions(true);
 
       const userRef = ref(db, `users/${firebaseUser.uid}`);
-      const unsubscribeValue = onValue(
+      const txRef = ref(db, `transactions/${firebaseUser.uid}`);
+
+      const unsubscribeUser = onValue(
         userRef,
         (snapshot) => {
           const data = (snapshot.val() || {}) as UserWalletData;
@@ -139,7 +189,44 @@ const Dashboard = () => {
         }
       );
 
-      return unsubscribeValue;
+      const unsubscribeTx = onValue(
+        txRef,
+        (snapshot) => {
+          const raw = snapshot.val() || {};
+
+          const rows: Transaction[] = Object.entries(raw).map(([key, value]) => {
+            const tx = (value || {}) as FirebaseTransaction;
+            const amount = toNumber(tx.amount);
+            const type = normalizeType(tx.type);
+            const status = normalizeStatus(tx.status);
+
+            return {
+              id: String(tx.id || key),
+              type,
+              asset: String(tx.asset || ""),
+              amount,
+              usdValue: 0,
+              status,
+              date: formatDateLabel(tx.createdAt, tx.createdAtLabel),
+              createdAt: tx.createdAt || 0,
+            };
+          });
+
+          rows.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+          setFirebaseTransactions(rows);
+          setLoadingTransactions(false);
+        },
+        (error) => {
+          console.error("Dashboard transactions fetch error:", error);
+          setFirebaseTransactions([]);
+          setLoadingTransactions(false);
+        }
+      );
+
+      return () => {
+        unsubscribeUser();
+        unsubscribeTx();
+      };
     });
 
     return () => unsubscribeAuth();
@@ -157,6 +244,14 @@ const Dashboard = () => {
       return acc;
     }, {});
   }, [market]);
+
+  const usdPriceMap = useMemo(() => {
+    return {
+      BTC: marketMap["bitcoin"]?.current_price ?? 0,
+      ETH: marketMap["ethereum"]?.current_price ?? 0,
+      USDT: marketMap["tether"]?.current_price ?? 1,
+    };
+  }, [marketMap]);
 
   const portfolio: PortfolioAsset[] = useMemo(() => {
     const wallets = walletSource.wallets || {};
@@ -252,7 +347,7 @@ const Dashboard = () => {
     }));
   }, [assetRows, totalAssets]);
 
-  const transactions: Transaction[] = useMemo(
+  const seedTransactions: Transaction[] = useMemo(
     () => [
       {
         id: "TX-20491",
@@ -303,18 +398,30 @@ const Dashboard = () => {
     [marketMap]
   );
 
+  const recentTransactions = useMemo(() => {
+    if (firebaseTransactions.length > 0) {
+      return firebaseTransactions.map((tx) => ({
+        ...tx,
+        usdValue: toNumber(tx.amount) * (usdPriceMap[tx.asset as keyof typeof usdPriceMap] ?? 0),
+      }));
+    }
+
+    return seedTransactions;
+  }, [firebaseTransactions, seedTransactions, usdPriceMap]);
+
   const filteredTransactions = useMemo(() => {
-    if (!globalSearch.trim()) return transactions;
+    if (!globalSearch.trim()) return recentTransactions;
 
     const q = globalSearch.toLowerCase().trim();
 
-    return transactions.filter(
+    return recentTransactions.filter(
       (tx) =>
         tx.id.toLowerCase().includes(q) ||
         tx.asset.toLowerCase().includes(q) ||
-        tx.type.toLowerCase().includes(q)
+        tx.type.toLowerCase().includes(q) ||
+        tx.status.toLowerCase().includes(q)
     );
-  }, [transactions, globalSearch]);
+  }, [recentTransactions, globalSearch]);
 
   const formatMoney = (value: number) =>
     new Intl.NumberFormat("en-US", {
@@ -385,7 +492,16 @@ const Dashboard = () => {
     if (type === "Receive" || type === "Deposit") {
       return <ArrowDownLeft className="h-4 w-4 text-emerald-400" />;
     }
+    if (type === "Transfer") {
+      return <Send className="h-4 w-4 text-sky-400" />;
+    }
     return <ArrowUpRight className="h-4 w-4 text-sky-400" />;
+  };
+
+  const getStatusIcon = (status: TxStatus) => {
+    if (status === "Completed") return <CheckCircle2 className="h-4 w-4" />;
+    if (status === "Pending") return <Clock3 className="h-4 w-4" />;
+    return <XCircle className="h-4 w-4" />;
   };
 
   const isLoading = loadingMarket || loadingWallets;
@@ -821,9 +937,7 @@ const Dashboard = () => {
                         tx.status
                       )}`}
                     >
-                      {tx.status === "Completed" && (
-                        <CheckCircle2 className="h-4 w-4" />
-                      )}
+                      {getStatusIcon(tx.status)}
                       {tx.status}
                     </span>
                   </div>
@@ -833,6 +947,18 @@ const Dashboard = () => {
                   </div>
                 </div>
               ))}
+
+              {!loadingTransactions && filteredTransactions.length === 0 && (
+                <div className="rounded-3xl bg-white/5 px-4 py-8 text-center text-sm text-slate-400 ring-1 ring-white/8">
+                  No transactions found.
+                </div>
+              )}
+
+              {loadingTransactions && (
+                <div className="rounded-3xl bg-white/5 px-4 py-8 text-center text-sm text-slate-400 ring-1 ring-white/8">
+                  Loading transactions...
+                </div>
+              )}
             </div>
           </div>
         </div>
