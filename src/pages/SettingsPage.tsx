@@ -576,7 +576,6 @@ const SettingsPage = () => {
                     className="h-12 w-full rounded-2xl border border-white/10 bg-white/5 px-4 text-sm outline-none focus:border-cyan-400/40"
                   >
                     <option value="English" className="bg-slate-900">English</option>
-                    <option value="Georgian" className="bg-slate-900">Georgian</option>
                   </select>
                 </div>
 
