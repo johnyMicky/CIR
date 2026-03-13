@@ -4,7 +4,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { 
   ShieldCheck, Bitcoin, Coins, Wallet, Landmark, Copy, 
   CheckCircle2, ArrowDownLeft, ArrowUpRight, RefreshCw, X, 
-  QrCode, Lock, TrendingUp, LayoutDashboard, History, Settings
+  QrCode, Lock, TrendingUp, LayoutDashboard, History, Settings,
+  Activity, Globe, Zap, ShieldAlert
 } from "lucide-react";
 import { db } from "../firebase";
 import { useAuth } from "../context/AuthContext";
@@ -73,187 +74,235 @@ const Dashboard = () => {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-[#080a0f] text-slate-200 font-sans selection:bg-blue-500/30">
+    <div className="min-h-screen bg-[#06080c] text-slate-200 font-sans selection:bg-blue-500/30">
       {/* SIDEBAR */}
-      <aside className="fixed left-0 top-0 hidden h-full w-64 border-r border-white/5 bg-[#0b0e14] lg:block">
-        <div className="flex h-20 items-center px-8 border-b border-white/5">
-          <ShieldCheck className="text-blue-500 mr-2" size={24} />
-          {/* განახლებული სახელი */}
-          <span className="text-sm font-black tracking-tighter text-white uppercase italic">Axcel Private Wallet</span>
+      <aside className="fixed left-0 top-0 hidden h-full w-64 border-r border-white/5 bg-[#080b11] lg:block z-50">
+        <div className="flex h-24 items-center px-8 border-b border-white/5">
+          <div className="bg-blue-600/20 p-2 rounded-xl border border-blue-500/20 mr-3">
+             <ShieldCheck className="text-blue-500" size={22} />
+          </div>
+          <span className="text-xs font-black tracking-widest text-white uppercase italic leading-tight">Axcel Private<br/>Wallet</span>
         </div>
-        <nav className="p-6 space-y-2">
-          <Link to="/dashboard" className="flex items-center gap-3 px-4 py-3 bg-blue-600/10 text-blue-400 rounded-xl font-bold transition-all">
-            <LayoutDashboard size={20} /> Dashboard
+        <nav className="p-6 space-y-3">
+          <Link to="/dashboard" className="flex items-center gap-3 px-4 py-3 bg-blue-600/10 text-blue-400 rounded-xl font-bold transition-all border border-blue-500/10">
+            <LayoutDashboard size={18} /> Dashboard
           </Link>
-          {/* History-ზე გადასვლის ფუნქცია */}
-          <button 
-            onClick={() => navigate('/history')}
-            className="w-full flex items-center gap-3 px-4 py-3 text-slate-500 hover:text-white transition-all"
-          >
-            <History size={20} /> History
+          <button onClick={() => navigate('/history')} className="w-full flex items-center gap-3 px-4 py-3 text-slate-500 hover:text-white transition-all">
+            <History size={18} /> History
           </button>
           <button className="w-full flex items-center gap-3 px-4 py-3 text-slate-500 hover:text-white transition-all">
-            <Settings size={20} /> Settings
+            <Settings size={18} /> Settings
           </button>
         </nav>
         <div className="absolute bottom-8 left-0 w-full px-6">
-          <button onClick={logout} className="flex w-full items-center gap-3 px-4 py-3 text-rose-500/70 hover:text-rose-500 font-bold transition-all">
-            <Lock size={20} /> Logout
+          <button onClick={logout} className="flex w-full items-center gap-3 px-4 py-3 text-rose-500/70 hover:text-rose-500 font-bold transition-all border border-rose-500/5 rounded-xl hover:bg-rose-500/5">
+            <Lock size={18} /> Logout
           </button>
         </div>
       </aside>
 
       {/* MAIN CONTENT */}
       <main className="lg:ml-64 p-4 md:p-8">
+        
+        {/* TOP LIVE STATS BAR - ახალი სექცია */}
+        <div className="flex flex-wrap items-center gap-6 mb-8 bg-white/[0.02] border border-white/5 p-4 rounded-2xl">
+            <div className="flex items-center gap-2">
+                <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Network: <span className="text-emerald-500">Secure</span></span>
+            </div>
+            <div className="h-4 w-px bg-white/10 hidden sm:block" />
+            <div className="flex items-center gap-2">
+                <Globe size={14} className="text-blue-500" />
+                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Node Location: <span className="text-white">Encrypted</span></span>
+            </div>
+            <div className="h-4 w-px bg-white/10 hidden sm:block" />
+            <div className="flex items-center gap-2">
+                <Zap size={14} className="text-amber-500" />
+                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Latency: <span className="text-white">12ms</span></span>
+            </div>
+        </div>
+
         <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
           <div>
-            <h1 className="text-3xl font-black text-white tracking-tight">Welcome, {userData?.firstName || 'User'}</h1>
-            <p className="text-slate-500 mt-1">Institutional node access is encrypted.</p>
+            <h1 className="text-4xl font-black text-white tracking-tight flex items-center gap-3">
+                Hi, {userData?.firstName || 'User'}
+                <ShieldAlert size={20} className="text-blue-500 opacity-50" />
+            </h1>
+            <p className="text-slate-500 mt-1 font-medium italic">Axcel secure node environment is active.</p>
           </div>
-          <div className="flex items-center gap-3 bg-white/5 p-2 rounded-2xl border border-white/5">
-            <div className="h-10 w-10 rounded-xl bg-blue-600 flex items-center justify-center font-bold text-white shadow-lg shadow-blue-600/20">
+          <div className="flex items-center gap-3 bg-[#0b0e14] p-2 rounded-2xl border border-white/5 shadow-xl">
+            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center font-black text-white text-xl">
               {userData?.firstName?.[0] || 'U'}
             </div>
             <div className="pr-4">
-              <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">ID</div>
-              <div className="text-sm font-mono text-blue-400">#{user.id.slice(0, 6)}</div>
+              <div className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Verified Client</div>
+              <div className="text-sm font-mono text-blue-400 font-bold">#{user.id.slice(0, 8).toUpperCase()}</div>
             </div>
           </div>
         </header>
 
         {/* PORTFOLIO CARD */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
-          <div className="lg:col-span-2 relative overflow-hidden rounded-[32px] bg-gradient-to-br from-blue-600 to-indigo-700 p-10 shadow-2xl shadow-blue-900/20">
+          <div className="lg:col-span-2 relative overflow-hidden rounded-[40px] bg-[#0b0e14] border border-white/5 p-10 group shadow-2xl">
+            {/* Background Decoration */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/10 blur-[100px] -z-10 group-hover:bg-blue-600/20 transition-all duration-700" />
+            
             <div className="relative z-10">
-              <span className="text-sm font-bold uppercase tracking-[0.2em] text-blue-100/60">Portfolio Balance</span>
-              <div className="text-6xl font-black text-white mt-2 mb-8">${balances.usd.toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
-              <div className="flex gap-4">
-                <button onClick={() => setReceiveOpen(true)} className="flex items-center gap-2 bg-white text-blue-700 px-6 py-3 rounded-full font-black text-xs uppercase tracking-widest hover:bg-blue-50 transition-all shadow-xl">
+              <div className="flex items-center gap-2 mb-4">
+                  <Activity size={16} className="text-blue-500" />
+                  <span className="text-[11px] font-black uppercase tracking-[0.3em] text-slate-500">Total Portfolio Assets</span>
+              </div>
+              <div className="flex items-baseline gap-4">
+                <div className="text-7xl font-black text-white tracking-tighter">${balances.usd.toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
+                <div className="text-emerald-500 font-black text-sm bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">+4.2%</div>
+              </div>
+
+              {/* პატარა ვიზუალური გრაფიკი */}
+              <div className="mt-8 mb-10 flex gap-1 h-12 items-end">
+                {[40, 70, 45, 90, 65, 80, 100, 75, 85, 60, 95, 110, 80].map((h, i) => (
+                    <div key={i} className="flex-1 bg-blue-600/20 rounded-t-sm hover:bg-blue-500 transition-all cursor-pointer" style={{ height: `${h}%` }} />
+                ))}
+              </div>
+
+              <div className="flex flex-wrap gap-4">
+                <button onClick={() => setReceiveOpen(true)} className="flex items-center gap-3 bg-blue-600 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-blue-500 transition-all shadow-lg shadow-blue-600/20">
                   <ArrowDownLeft size={18} /> Receive
                 </button>
-                <button className="flex items-center gap-2 bg-blue-500/20 border border-white/20 text-white px-6 py-3 rounded-full font-black text-xs uppercase tracking-widest hover:bg-white/10 transition-all">
+                <button className="flex items-center gap-3 bg-white/5 border border-white/10 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-white/10 transition-all">
                   <ArrowUpRight size={18} /> Withdraw
-                </button>
-                <button className="flex items-center gap-2 bg-white/5 text-white px-6 py-3 rounded-full font-black text-xs uppercase tracking-widest hover:bg-white/10 transition-all border border-white/10">
-                  <RefreshCw size={18} /> Swap
                 </button>
               </div>
             </div>
           </div>
-          <div className="bg-[#0b0e14] border border-white/5 rounded-[32px] p-8">
-            <h3 className="text-sm font-bold uppercase tracking-widest text-slate-500 mb-6">Market Prices</h3>
-            <div className="space-y-6">
-              {Object.entries(market).map(([coin, data]: any) => (
-                <div key={coin} className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <img src={data.image} className="h-8 w-8" alt="" />
-                    <div>
-                      <div className="font-bold text-white">{coin}</div>
-                      <div className="text-xs text-slate-500">Live Feed</div>
+
+          <div className="bg-[#0b0e14] border border-white/5 rounded-[40px] p-8 flex flex-col justify-between">
+            <div>
+                <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 mb-8">Node Market Data</h3>
+                <div className="space-y-6">
+                {Object.entries(market).map(([coin, data]: any) => (
+                    <div key={coin} className="flex items-center justify-between group cursor-default">
+                    <div className="flex items-center gap-4">
+                        <div className="h-10 w-10 bg-white/5 rounded-xl flex items-center justify-center border border-white/5 group-hover:border-blue-500/30 transition-all">
+                            <img src={data.image} className="h-6 w-6" alt="" />
+                        </div>
+                        <div>
+                        <div className="font-black text-white text-sm">{coin}</div>
+                        <div className="text-[10px] font-bold text-slate-600">Secure Pair</div>
+                        </div>
                     </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-bold text-white">${data.price.toLocaleString()}</div>
-                  </div>
+                    <div className="text-right">
+                        <div className="font-black text-white text-sm">${data.price.toLocaleString()}</div>
+                        <div className="text-[10px] font-bold text-emerald-500">Live</div>
+                    </div>
+                    </div>
+                ))}
                 </div>
-              ))}
             </div>
+            <button className="w-full mt-8 py-4 border border-white/5 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-white hover:bg-white/5 transition-all">View All Markets</button>
           </div>
         </div>
 
         {/* ASSETS TABLE */}
-        <div className="bg-[#0b0e14] border border-white/5 rounded-[32px] overflow-hidden">
-          <div className="px-8 py-6 border-b border-white/5">
-            <h3 className="font-black text-white uppercase tracking-widest text-sm italic">Asset Nodes</h3>
+        <div className="bg-[#0b0e14] border border-white/5 rounded-[40px] overflow-hidden shadow-2xl">
+          <div className="px-10 py-8 border-b border-white/5 flex justify-between items-center">
+            <h3 className="font-black text-white uppercase tracking-widest text-sm italic">Encrypted Asset Nodes</h3>
+            <div className="flex items-center gap-2 bg-blue-500/10 px-3 py-1 rounded-full">
+                <ShieldCheck size={14} className="text-blue-500" />
+                <span className="text-[9px] font-black text-blue-400 uppercase tracking-widest">Protocol V2.4 Active</span>
+            </div>
           </div>
-          <table className="w-full text-left">
-            <thead>
-              <tr className="text-[10px] uppercase tracking-[0.2em] text-slate-500">
-                <th className="px-8 py-4">Coin</th>
-                <th className="px-8 py-4">Amount</th>
-                <th className="px-8 py-4">Value</th>
-                <th className="px-8 py-4">Address</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/5">
-              {(['BTC', 'ETH', 'USDT'] as CoinKey[]).map((id) => (
-                <tr key={id} className="hover:bg-white/[0.02] transition-all">
-                  <td className="px-8 py-6">
-                    <div className="flex items-center gap-3">
-                      <img src={market[id].image} className="h-10 w-10 p-1" alt="" />
-                      <div>
-                        <div className="font-black text-white">{id} Wallet</div>
-                        <div className="text-xs text-slate-500">Node v4.2</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-8 py-6 font-bold text-white">
-                    {balances[id.toLowerCase() as keyof typeof balances]} {id}
-                  </td>
-                  <td className="px-8 py-6 font-bold text-blue-400">
-                    ${(balances[id.toLowerCase() as keyof typeof balances] * market[id].price).toLocaleString()}
-                  </td>
-                  <td className="px-8 py-6">
-                    <button 
-                      onClick={() => handleCopy(userData?.[`${id.toLowerCase()}_address`] || '', id)} 
-                      className="flex items-center gap-2 bg-white/5 px-4 py-2 rounded-xl text-xs hover:bg-white/10 border border-white/5 transition-all"
-                    >
-                      {copied === id ? <CheckCircle2 size={14} className="text-emerald-500" /> : <Copy size={14} />}
-                      <span className="font-mono opacity-50">
-                        {userData?.[`${id.toLowerCase()}_address`]?.slice(0,8) || 'Not Assigned'}...
-                      </span>
-                    </button>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+                <thead>
+                <tr className="text-[10px] uppercase tracking-[0.3em] text-slate-600 border-b border-white/5">
+                    <th className="px-10 py-6">Asset Source</th>
+                    <th className="px-10 py-6">Node Balance</th>
+                    <th className="px-10 py-6">USD Value</th>
+                    <th className="px-10 py-6">Secure Route</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                {(['BTC', 'ETH', 'USDT'] as CoinKey[]).map((id) => (
+                    <tr key={id} className="hover:bg-white/[0.02] transition-all group">
+                    <td className="px-10 py-8">
+                        <div className="flex items-center gap-4">
+                        <img src={market[id].image} className="h-10 w-10 grayscale group-hover:grayscale-0 transition-all" alt="" />
+                        <div>
+                            <div className="font-black text-white text-base">{id} Asset</div>
+                            <div className="text-xs text-slate-600 font-medium">Distributed Node</div>
+                        </div>
+                        </div>
+                    </td>
+                    <td className="px-10 py-8 font-black text-white text-lg">
+                        {balances[id.toLowerCase() as keyof typeof balances]} {id}
+                    </td>
+                    <td className="px-10 py-8">
+                        <div className="font-black text-blue-500 text-lg">${(balances[id.toLowerCase() as keyof typeof balances] * market[id].price).toLocaleString()}</div>
+                    </td>
+                    <td className="px-10 py-8">
+                        <button 
+                        onClick={() => handleCopy(userData?.[`${id.toLowerCase()}_address`] || '', id)} 
+                        className="flex items-center gap-3 bg-white/[0.03] px-5 py-3 rounded-2xl text-[11px] font-bold hover:bg-white/10 border border-white/5 transition-all text-slate-400 hover:text-white"
+                        >
+                        {copied === id ? <CheckCircle2 size={16} className="text-emerald-500" /> : <Copy size={16} />}
+                        <span className="font-mono opacity-40">
+                            {userData?.[`${id.toLowerCase()}_address`]?.slice(0,10) || 'Assigning'}...
+                        </span>
+                        </button>
+                    </td>
+                    </tr>
+                ))}
+                </tbody>
+            </table>
+          </div>
         </div>
       </main>
 
-      {/* MODAL: RECEIVE (წაშლილია Amount და TXID ველები) */}
+      {/* MODAL: RECEIVE (მხოლოდ QR და მისამართი) */}
       {receiveOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-xl">
-          <div className="bg-[#0b101a] border border-white/10 w-full max-w-md rounded-[40px] p-8 relative overflow-hidden">
-            <button onClick={() => setReceiveOpen(false)} className="absolute top-6 right-6 text-slate-500 hover:text-white"><X /></button>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/95 backdrop-blur-2xl">
+          <div className="bg-[#0b0e14] border border-white/10 w-full max-w-md rounded-[50px] p-10 relative shadow-2xl">
+            <button onClick={() => setReceiveOpen(false)} className="absolute top-8 right-8 text-slate-500 hover:text-white transition-all"><X /></button>
             
-            <h2 className="text-2xl font-black text-white mb-6 italic uppercase">Deposit Funds</h2>
+            <div className="mb-10">
+                <h2 className="text-3xl font-black text-white italic uppercase tracking-tighter">Inbound Node</h2>
+                <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mt-2">Select asset for deposit routing</p>
+            </div>
 
-            <div className="flex gap-3 mb-8">
+            <div className="flex gap-3 mb-10">
               {(['BTC', 'ETH', 'USDT'] as CoinKey[]).map((c) => (
                 <button 
                   key={c} 
                   onClick={() => setReceiveCoin(c)}
-                  className={`flex-1 py-4 rounded-2xl border transition-all font-bold ${receiveCoin === c ? 'bg-blue-600 border-blue-500 text-white' : 'bg-white/5 border-white/5 text-slate-500'}`}
+                  className={`flex-1 py-4 rounded-2xl border transition-all font-black text-xs tracking-widest ${receiveCoin === c ? 'bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-600/20' : 'bg-white/5 border-white/5 text-slate-600 hover:bg-white/10'}`}
                 >
                   {c}
                 </button>
               ))}
             </div>
 
-            <div className="bg-black/40 p-8 rounded-[32px] border border-white/5 text-center">
-              {/* QR კოდი */}
+            <div className="bg-black/60 p-10 rounded-[40px] border border-white/5 text-center shadow-inner">
               <img 
                 src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${userData?.[`${receiveCoin.toLowerCase()}_address`] || 'none'}`} 
-                className="mx-auto h-44 w-44 rounded-2xl mb-8 border-8 border-white"
+                className="mx-auto h-48 w-48 rounded-[30px] mb-10 border-[12px] border-white shadow-2xl"
                 alt="QR"
               />
               
-              <div className="text-[10px] uppercase tracking-widest text-slate-500 mb-3 font-bold">Your {receiveCoin} Deposit Address</div>
+              <div className="text-[10px] uppercase tracking-[0.3em] text-slate-600 mb-4 font-black">Secure {receiveCoin} Address</div>
               
-              {/* მისამართის კოპირება */}
               <button 
                 onClick={() => handleCopy(userData?.[`${receiveCoin.toLowerCase()}_address`] || '', 'modal-addr')}
-                className="w-full font-mono text-xs text-blue-400 break-all bg-blue-500/10 p-4 rounded-xl border border-blue-500/20 hover:bg-blue-500/20 transition-all flex items-center justify-center gap-2 group"
+                className="w-full font-mono text-[11px] text-blue-400 break-all bg-blue-600/5 p-5 rounded-2xl border border-blue-500/10 hover:border-blue-500/30 transition-all flex items-center justify-center gap-3 group"
               >
-                {userData?.[`${receiveCoin.toLowerCase()}_address`] || 'Contact Admin'}
-                {copied === 'modal-addr' ? <CheckCircle2 size={14} className="text-emerald-500" /> : <Copy size={14} className="opacity-40 group-hover:opacity-100" />}
+                {userData?.[`${receiveCoin.toLowerCase()}_address`] || 'Initializing node...'}
+                {copied === 'modal-addr' ? <CheckCircle2 size={16} className="text-emerald-500" /> : <Copy size={16} className="opacity-20 group-hover:opacity-100 transition-all" />}
               </button>
             </div>
 
-            <p className="mt-6 text-center text-[10px] text-slate-500 uppercase tracking-widest font-bold">
-              Only send {receiveCoin} to this address
-            </p>
+            <div className="mt-8 flex items-center justify-center gap-2">
+                <ShieldCheck size={14} className="text-slate-600" />
+                <span className="text-[9px] font-black text-slate-600 uppercase tracking-[0.2em]">Protocol: End-to-End Encrypted</span>
+            </div>
           </div>
         </div>
       )}
