@@ -1,875 +1,810 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { ref, onValue } from "firebase/database";
 import {
   Bell,
-  Search,
+  ChevronDown,
   Eye,
   EyeOff,
   LayoutDashboard,
   Wallet,
   ArrowUpDown,
+  RefreshCw,
   History,
   Settings,
   LifeBuoy,
-  ShieldAlert,
-  ShieldCheck,
-  Bitcoin,
-  Coins,
-  Landmark,
+  Search,
+  LogOut,
   ArrowDownLeft,
   ArrowUpRight,
-  Repeat,
   CreditCard,
-  ChevronRight,
-  Wifi,
-  WifiOff,
-  Clock3,
-  Mail,
-  Phone,
-  Globe,
-  MapPin,
-  LogOut,
+  Send,
+  TrendingUp,
+  TrendingDown,
+  Copy,
   CheckCircle2,
-  AlertTriangle,
-  XCircle
 } from "lucide-react";
-import { db } from "../firebase";
-import { useAuth } from "../context/AuthContext";
+import {
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+} from "recharts";
 
-type UserData = {
-  firstName?: string;
-  lastName?: string;
-  fullName?: string;
-  name?: string;
-  email?: string;
-  phone?: string;
-  country?: string;
-  stateRegion?: string;
-  city?: string;
-  online?: boolean;
-  last_seen?: number | string;
-  lastSeen?: string;
-
-  btc_balance?: number;
-  eth_balance?: number;
-  usdt_balance?: number;
-  usd_balance?: number;
-  balance?: string | number;
-
-  btc_address?: string;
-  eth_address?: string;
-  usdt_address?: string;
-
-  kycStatus?: "verified" | "pending" | "unverified";
-  twoFactorEnabled?: boolean;
+type MarketCoin = {
+  id: string;
+  symbol: string;
+  name: string;
+  image: string;
+  current_price: number;
+  price_change_percentage_24h: number;
 };
 
-type TxItem = {
+type PortfolioAsset = {
   id: string;
-  type?: string;
-  currency?: string;
-  asset?: string;
-  amount?: string | number;
-  status?: "pending" | "processing" | "completed" | "rejected" | "failed";
-  created_at?: number | string;
-  date?: string;
+  symbol: string;
+  name: string;
+  amount: number;
 };
 
-type NotificationItem = {
+type TxStatus = "Pending" | "Completed" | "Failed";
+type TxType = "Receive" | "Withdraw" | "Transfer" | "Deposit" | "Buy";
+
+type Transaction = {
   id: string;
-  title?: string;
-  message?: string;
-  read?: boolean;
-  created_at?: number | string;
+  type: TxType;
+  asset: string;
+  amount: number;
+  usdValue: number;
+  status: TxStatus;
+  date: string;
 };
 
 const sidebarItems = [
-  { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { key: "wallets", label: "My Wallets", icon: Wallet },
-  { key: "send-receive", label: "Send / Receive", icon: ArrowUpDown },
-  { key: "swap", label: "Exchange / Swap", icon: Repeat },
-  { key: "history", label: "Transactions History", icon: History },
-  { key: "settings", label: "Settings & Security", icon: Settings },
-  { key: "support", label: "Support / Help", icon: LifeBuoy }
+  { label: "Dashboard", icon: LayoutDashboard, active: true },
+  { label: "My Wallets", icon: Wallet },
+  { label: "Send / Receive", icon: ArrowUpDown },
+  { label: "Exchange / Swap", icon: RefreshCw },
+  { label: "Transactions History", icon: History },
+  { label: "Settings", icon: Settings },
+  { label: "Support / Help", icon: LifeBuoy },
 ];
 
-const marketSeed = [
-  { symbol: "BTC/USD", price: 68223.41, change: 2.18 },
-  { symbol: "ETH/USD", price: 3214.77, change: 1.46 },
-  { symbol: "USDT/USD", price: 1.0, change: 0.0 },
-  { symbol: "SOL/USD", price: 146.28, change: 3.12 }
+const portfolio: PortfolioAsset[] = [
+  { id: "bitcoin", symbol: "BTC", name: "Bitcoin", amount: 0.2458 },
+  { id: "ethereum", symbol: "ETH", name: "Ethereum", amount: 2.86 },
+  { id: "tether", symbol: "USDT", name: "Tether", amount: 5400 },
+  { id: "solana", symbol: "SOL", name: "Solana", amount: 22.5 },
+  { id: "binancecoin", symbol: "BNB", name: "BNB", amount: 5.1 },
 ];
 
-const formatLastSeen = (value?: number | string, legacy?: string) => {
-  if (legacy && typeof legacy === "string") return legacy;
-  if (!value) return "No recent activity";
+const mockNotifications = [
+  { id: 1, text: "Transaction confirmed", time: "2 min ago", unread: true },
+  { id: 2, text: "New login detected", time: "18 min ago", unread: true },
+  { id: 3, text: "Deposit received", time: "1 hour ago", unread: false },
+];
 
-  const timestamp = typeof value === "string" ? Number(value) : value;
-  if (!timestamp) return "No recent activity";
-
-  const diff = Date.now() - timestamp;
-  const minutes = Math.floor(diff / 60000);
-  const hours = Math.floor(diff / 3600000);
-  const days = Math.floor(diff / 86400000);
-
-  if (minutes < 1) return "Just now";
-  if (minutes < 60) return `${minutes} min ago`;
-  if (hours < 24) return `${hours} hour ago`;
-  return `${days} day ago`;
-};
-
-const formatDate = (value?: number | string, fallback?: string) => {
-  if (fallback) return fallback;
-  if (!value) return "-";
-  const ts = typeof value === "string" ? Number(value) : value;
-  if (!ts) return "-";
-  return new Date(ts).toLocaleString();
-};
-
-const statusPill = (status?: string) => {
-  switch (status) {
-    case "completed":
-      return "text-emerald-300 bg-emerald-500/10 border-emerald-500/20";
-    case "processing":
-    case "pending":
-      return "text-amber-300 bg-amber-500/10 border-amber-500/20";
-    case "rejected":
-    case "failed":
-      return "text-rose-300 bg-rose-500/10 border-rose-500/20";
-    default:
-      return "text-slate-300 bg-white/[0.04] border-white/10";
-  }
-};
-
-const statusIcon = (status?: string) => {
-  switch (status) {
-    case "completed":
-      return <CheckCircle2 size={14} />;
-    case "processing":
-    case "pending":
-      return <AlertTriangle size={14} />;
-    case "rejected":
-    case "failed":
-      return <XCircle size={14} />;
-    default:
-      return <Clock3 size={14} />;
-  }
-};
-
-const buttonFx =
-  "relative overflow-hidden transition-all duration-300 before:content-[''] before:absolute before:w-[140%] before:h-[140%] before:top-[-140%] before:left-[-140%] before:bg-[linear-gradient(120deg,transparent,rgba(255,255,255,0.22),transparent)] before:rotate-[25deg] before:transition-all before:duration-700 hover:before:top-[140%] hover:before:left-[140%]";
+const COLORS = ["#3B82F6", "#22D3EE", "#8B5CF6", "#10B981", "#F59E0B"];
 
 const Dashboard = () => {
-  const { user, logout } = useAuth() as any;
-
-  const [userData, setUserData] = useState<UserData | null>(null);
-  const [transactions, setTransactions] = useState<TxItem[]>([]);
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
-  const [balanceVisible, setBalanceVisible] = useState(true);
+  const [showBalance, setShowBalance] = useState(true);
+  const [showNotifications, setShowNotifications] = useState(false);
   const [search, setSearch] = useState("");
-  const [activeMenu, setActiveMenu] = useState("dashboard");
-  const [marketData, setMarketData] = useState(marketSeed);
+  const [market, setMarket] = useState<MarketCoin[]>([]);
+  const [loadingMarket, setLoadingMarket] = useState(true);
 
   useEffect(() => {
-    if (!user?.id) return;
+    const fetchMarket = async () => {
+      try {
+        setLoadingMarket(true);
 
-    const userRef = ref(db, `users/${user.id}`);
-    const txRef = ref(db, "transactions");
-    const notiRef = ref(db, `notifications/${user.id}`);
+        const ids = [
+          "bitcoin",
+          "ethereum",
+          "tether",
+          "solana",
+          "binancecoin",
+          "ripple",
+        ].join(",");
 
-    const unsubUser = onValue(userRef, (snapshot) => {
-      if (snapshot.exists()) {
-        setUserData(snapshot.val());
-      } else {
-        setUserData(null);
+        const res = await fetch(
+          `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${ids}&order=market_cap_desc&per_page=10&page=1&sparkline=false&price_change_percentage=24h`
+        );
+
+        if (!res.ok) throw new Error("Failed to fetch market data");
+
+        const data = await res.json();
+        setMarket(data);
+      } catch (error) {
+        console.error("Market fetch error:", error);
+      } finally {
+        setLoadingMarket(false);
       }
-    });
-
-    const unsubTx = onValue(txRef, (snapshot) => {
-      if (!snapshot.exists()) {
-        setTransactions([]);
-        return;
-      }
-
-      const data = snapshot.val();
-      const rows = Object.entries(data)
-        .map(([id, value]) => ({ id, ...(value as any) }))
-        .filter((item: any) => item.userId === user.id) as TxItem[];
-
-      rows.sort(
-        (a, b) => Number(b.created_at || 0) - Number(a.created_at || 0)
-      );
-
-      setTransactions(rows.slice(0, 10));
-    });
-
-    const unsubNoti = onValue(notiRef, (snapshot) => {
-      if (!snapshot.exists()) {
-        setNotifications([]);
-        return;
-      }
-
-      const data = snapshot.val();
-      const rows = Object.entries(data).map(([id, value]) => ({
-        id,
-        ...(value as any)
-      })) as NotificationItem[];
-
-      rows.sort(
-        (a, b) => Number(b.created_at || 0) - Number(a.created_at || 0)
-      );
-
-      setNotifications(rows.slice(0, 8));
-    });
-
-    return () => {
-      unsubUser();
-      unsubTx();
-      unsubNoti();
     };
-  }, [user?.id]);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setMarketData((prev) =>
-        prev.map((item) => {
-          const drift = (Math.random() - 0.5) * 0.8;
-          const nextPrice =
-            item.symbol === "USDT/USD"
-              ? 1
-              : Number((item.price * (1 + drift / 100)).toFixed(2));
-          const nextChange =
-            item.symbol === "USDT/USD"
-              ? 0
-              : Number((item.change + drift / 2).toFixed(2));
-
-          return { ...item, price: nextPrice, change: nextChange };
-        })
-      );
-    }, 5000);
+    fetchMarket();
+    const interval = setInterval(fetchMarket, 45000);
 
     return () => clearInterval(interval);
   }, []);
 
-  const balances = useMemo(() => {
-    const btc = Number(userData?.btc_balance || 0);
-    const eth = Number(userData?.eth_balance || 0);
-    const usdt = Number(userData?.usdt_balance || 0);
-    const usd =
-      userData?.usd_balance !== undefined
-        ? Number(userData.usd_balance || 0)
-        : Number(userData?.balance || 0);
+  const marketMap = useMemo(() => {
+    return market.reduce<Record<string, MarketCoin>>((acc, coin) => {
+      acc[coin.id] = coin;
+      return acc;
+    }, {});
+  }, [market]);
 
-    return { btc, eth, usdt, usd };
-  }, [userData]);
+  const assetRows = useMemo(() => {
+    return portfolio.map((asset) => {
+      const coin = marketMap[asset.id];
+      const currentPrice = coin?.current_price ?? 0;
+      const totalValue = currentPrice * asset.amount;
 
-  const fullName =
-    userData?.fullName ||
-    `${userData?.firstName || ""} ${userData?.lastName || ""}`.trim() ||
-    userData?.name ||
-    user?.email ||
-    "User";
-
-  const unreadNotifications = notifications.filter((n) => !n.read).length;
-
-  const locationText = [userData?.city, userData?.stateRegion, userData?.country]
-    .filter(Boolean)
-    .join(", ");
-
-  const totalAssets = balances.usd;
-  const dayChange = 2.5;
-
-  const assetRows = [
-    {
-      symbol: "BTC",
-      amount: balances.btc,
-      price: marketData[0].price,
-      total: balances.btc * marketData[0].price,
-      color: "#f59e0b"
-    },
-    {
-      symbol: "ETH",
-      amount: balances.eth,
-      price: marketData[1].price,
-      total: balances.eth * marketData[1].price,
-      color: "#94a3b8"
-    },
-    {
-      symbol: "USDT",
-      amount: balances.usdt,
-      price: 1,
-      total: balances.usdt,
-      color: "#10b981"
-    }
-  ];
-
-  const allocationTotal = assetRows.reduce((sum, item) => sum + item.total, 0);
-
-  const searchedTransactions = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return transactions;
-
-    return transactions.filter((tx) => {
-      const hay = [
-        tx.id,
-        tx.type,
-        tx.currency,
-        tx.asset,
-        String(tx.amount || ""),
-        tx.status
-      ]
-        .join(" ")
-        .toLowerCase();
-
-      return hay.includes(q);
+      return {
+        ...asset,
+        image: coin?.image || "",
+        currentPrice,
+        totalValue,
+        priceChange: coin?.price_change_percentage_24h ?? 0,
+      };
     });
+  }, [marketMap]);
+
+  const totalAssets = useMemo(() => {
+    return assetRows.reduce((sum, asset) => sum + asset.totalValue, 0);
+  }, [assetRows]);
+
+  const total24hChangeValue = useMemo(() => {
+    return assetRows.reduce((sum, asset) => {
+      const pct = asset.priceChange || 0;
+      const current = asset.totalValue;
+      const prev = pct === -100 ? current : current / (1 + pct / 100 || 1);
+      return sum + (current - prev);
+    }, 0);
+  }, [assetRows]);
+
+  const total24hPercent = useMemo(() => {
+    if (totalAssets <= 0) return 0;
+    return (total24hChangeValue / (totalAssets - total24hChangeValue || 1)) * 100;
+  }, [totalAssets, total24hChangeValue]);
+
+  const donutData = useMemo(() => {
+    return assetRows
+      .filter((a) => a.totalValue > 0)
+      .map((a) => ({
+        name: a.symbol,
+        value: Number(a.totalValue.toFixed(2)),
+      }));
+  }, [assetRows]);
+
+  const transactions: Transaction[] = useMemo(
+    () => [
+      {
+        id: "TX-20491",
+        type: "Receive",
+        asset: "BTC",
+        amount: 0.0215,
+        usdValue: (marketMap["bitcoin"]?.current_price || 0) * 0.0215,
+        status: "Completed",
+        date: "2026-03-13 20:16",
+      },
+      {
+        id: "TX-20488",
+        type: "Withdraw",
+        asset: "USDT",
+        amount: 800,
+        usdValue: 800,
+        status: "Pending",
+        date: "2026-03-13 18:52",
+      },
+      {
+        id: "TX-20480",
+        type: "Deposit",
+        asset: "ETH",
+        amount: 0.85,
+        usdValue: (marketMap["ethereum"]?.current_price || 0) * 0.85,
+        status: "Completed",
+        date: "2026-03-13 17:11",
+      },
+      {
+        id: "TX-20472",
+        type: "Transfer",
+        asset: "SOL",
+        amount: 5,
+        usdValue: (marketMap["solana"]?.current_price || 0) * 5,
+        status: "Failed",
+        date: "2026-03-13 14:08",
+      },
+      {
+        id: "TX-20463",
+        type: "Buy",
+        asset: "BNB",
+        amount: 1.1,
+        usdValue: (marketMap["binancecoin"]?.current_price || 0) * 1.1,
+        status: "Completed",
+        date: "2026-03-13 11:44",
+      },
+      {
+        id: "TX-20451",
+        type: "Receive",
+        asset: "USDT",
+        amount: 1200,
+        usdValue: 1200,
+        status: "Completed",
+        date: "2026-03-13 09:05",
+      },
+    ],
+    [marketMap]
+  );
+
+  const filteredTransactions = useMemo(() => {
+    if (!search.trim()) return transactions;
+
+    const q = search.toLowerCase().trim();
+
+    return transactions.filter(
+      (tx) =>
+        tx.id.toLowerCase().includes(q) ||
+        tx.asset.toLowerCase().includes(q) ||
+        tx.type.toLowerCase().includes(q)
+    );
   }, [transactions, search]);
 
-  const donut = useMemo(() => {
-    if (allocationTotal <= 0) return [];
+  const unreadCount = mockNotifications.filter((n) => n.unread).length;
 
-    let cumulative = 0;
-    return assetRows.map((item) => {
-      const percent = (item.total / allocationTotal) * 100;
-      const start = cumulative;
-      cumulative += percent;
-      return { ...item, percent, start };
-    });
-  }, [allocationTotal, assetRows]);
+  const formatMoney = (value: number) =>
+    new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      maximumFractionDigits: value >= 1000 ? 2 : 4,
+    }).format(value);
 
-  if (!user || !userData) {
-    return (
-      <div className="min-h-screen bg-[#020617] text-white flex items-center justify-center">
-        Loading wallet...
-      </div>
-    );
-  }
+  const formatCoinAmount = (value: number) =>
+    new Intl.NumberFormat("en-US", {
+      minimumFractionDigits: value < 1 ? 4 : 2,
+      maximumFractionDigits: value < 1 ? 6 : 2,
+    }).format(value);
+
+  const getStatusClass = (status: TxStatus) => {
+    if (status === "Completed") {
+      return "bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-400/20";
+    }
+    if (status === "Pending") {
+      return "bg-amber-500/15 text-amber-300 ring-1 ring-amber-400/20";
+    }
+    return "bg-rose-500/15 text-rose-300 ring-1 ring-rose-400/20";
+  };
+
+  const getTypeIcon = (type: TxType) => {
+    if (type === "Receive" || type === "Deposit") {
+      return <ArrowDownLeft className="h-4 w-4 text-emerald-400" />;
+    }
+    return <ArrowUpRight className="h-4 w-4 text-sky-400" />;
+  };
 
   return (
-    <div className="min-h-screen bg-[#020617] text-white">
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-[-120px] left-[10%] w-[340px] h-[340px] bg-blue-600/10 blur-[100px] rounded-full" />
-        <div className="absolute top-[18%] right-[8%] w-[280px] h-[280px] bg-cyan-500/10 blur-[100px] rounded-full" />
-        <div className="absolute bottom-[-140px] left-[28%] w-[360px] h-[360px] bg-indigo-500/10 blur-[120px] rounded-full" />
-      </div>
-
-      <div className="relative flex min-h-screen">
-        <aside className="hidden xl:flex w-[270px] shrink-0 border-r border-white/8 bg-[linear-gradient(180deg,#07101d_0%,#0a1220_100%)] flex-col">
-          <div className="px-6 py-6 border-b border-white/8">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(34,211,238,0.12),_transparent_18%),radial-gradient(circle_at_right_top,_rgba(139,92,246,0.14),_transparent_22%),linear-gradient(180deg,#07111F_0%,#0A1427_45%,#0C1730_100%)] text-white">
+      <div className="flex min-h-screen">
+        {/* Sidebar */}
+        <aside className="hidden xl:flex w-72 shrink-0 flex-col border-r border-white/10 bg-[#0A1220]/80 backdrop-blur-xl">
+          <div className="px-6 py-6 border-b border-white/10">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-blue-600/20 border border-blue-500/20 flex items-center justify-center text-blue-300 shadow-[0_0_25px_rgba(37,99,235,0.15)]">
-                <ShieldCheck size={22} />
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-400 via-blue-500 to-violet-500 shadow-[0_0_30px_rgba(59,130,246,0.35)]">
+                <Wallet className="h-5 w-5 text-white" />
               </div>
               <div>
-                <div className="text-xl font-black tracking-tight">Axcel Wallet</div>
-                <div className="text-[10px] uppercase tracking-[0.26em] text-white/30 font-bold mt-1">
-                  Private Client Access
-                </div>
+                <div className="text-lg font-semibold tracking-wide">Axcelci.com</div>
+                <div className="text-xs text-slate-400">Private Wallet Dashboard</div>
               </div>
             </div>
           </div>
 
-          <div className="p-4 space-y-2">
+          <nav className="flex-1 px-4 py-5 space-y-2">
             {sidebarItems.map((item) => {
               const Icon = item.icon;
-              const active = activeMenu === item.key;
-
               return (
                 <button
-                  key={item.key}
-                  onClick={() => setActiveMenu(item.key)}
-                  className={`w-full flex items-center gap-3 rounded-2xl px-4 py-3 transition-all ${
-                    active
-                      ? "bg-blue-600/15 border border-blue-500/20 text-blue-300 shadow-[0_0_18px_rgba(37,99,235,0.10)]"
-                      : "border border-transparent bg-white/[0.02] hover:bg-white/[0.05] text-slate-300"
+                  key={item.label}
+                  className={`w-full rounded-2xl px-4 py-3 transition-all duration-200 ${
+                    item.active
+                      ? "bg-gradient-to-r from-blue-500/20 via-cyan-400/10 to-violet-500/20 text-white shadow-[0_0_25px_rgba(59,130,246,0.15)] ring-1 ring-cyan-300/15"
+                      : "text-slate-300 hover:bg-white/5 hover:text-white"
                   }`}
                 >
-                  <Icon size={18} />
-                  <span className="font-medium">{item.label}</span>
+                  <div className="flex items-center gap-3">
+                    <Icon className="h-5 w-5" />
+                    <span className="text-sm font-medium">{item.label}</span>
+                  </div>
                 </button>
               );
             })}
-          </div>
+          </nav>
 
-          <div className="mt-auto p-4 border-t border-white/8">
-            <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-4 mb-3">
-              <div className="text-[10px] uppercase tracking-[0.22em] text-white/30 font-bold mb-2">
-                Security Status
-              </div>
-              <div className="text-sm text-slate-300">
-                KYC:{" "}
-                <span className="text-amber-300 font-semibold">
-                  {userData.kycStatus || "unverified"}
-                </span>
-              </div>
-              <div className="text-sm text-slate-300 mt-1">
-                2FA:{" "}
-                <span
-                  className={`font-semibold ${
-                    userData.twoFactorEnabled ? "text-emerald-300" : "text-rose-300"
-                  }`}
-                >
-                  {userData.twoFactorEnabled ? "enabled" : "disabled"}
-                </span>
+          <div className="p-4 border-t border-white/10">
+            <div className="rounded-3xl bg-white/5 p-4 ring-1 ring-white/10">
+              <div className="text-sm font-medium">Secure wallet access</div>
+              <div className="mt-1 text-xs leading-5 text-slate-400">
+                Clean responsive dashboard with live crypto prices and asset
+                breakdown.
               </div>
             </div>
-
-            <button
-              onClick={logout}
-              className={`w-full flex items-center justify-center gap-2 rounded-2xl border border-rose-500/20 bg-rose-500/10 hover:bg-rose-500 hover:text-white text-rose-300 py-3 transition-all ${buttonFx}`}
-            >
-              <LogOut size={16} className="relative z-10" />
-              <span className="font-medium relative z-10">Logout</span>
-            </button>
           </div>
         </aside>
 
-        <main className="flex-1 min-w-0">
-          <header className="sticky top-0 z-30 border-b border-white/8 bg-[#020617]/85 backdrop-blur-xl">
-            <div className="px-4 md:px-8 py-4 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <div>
-                  <div className="text-[10px] uppercase tracking-[0.26em] text-blue-300/80 font-bold mb-1">
-                    Client Workspace
+        {/* Main */}
+        <div className="flex-1 min-w-0">
+          {/* Header */}
+          <header className="sticky top-0 z-40 border-b border-white/10 bg-[#081120]/75 backdrop-blur-xl">
+            <div className="px-4 sm:px-6 lg:px-8">
+              <div className="flex h-20 items-center gap-3 sm:gap-4">
+                <div className="xl:hidden flex items-center gap-3 min-w-[140px]">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-400 via-blue-500 to-violet-500">
+                    <Wallet className="h-5 w-5 text-white" />
                   </div>
-                  <div className="text-2xl font-black tracking-tight">
-                    Dashboard
-                  </div>
+                  <div className="text-sm font-semibold">Axcelci</div>
                 </div>
-              </div>
 
-              <div className="flex items-center gap-3 flex-wrap">
-                <div className="relative min-w-[260px]">
-                  <Search
-                    size={16}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
-                  />
+                <div className="relative flex-1 max-w-2xl">
+                  <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                   <input
+                    type="text"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Search transaction ID or asset..."
-                    className="w-full rounded-2xl bg-white/[0.04] border border-white/8 pl-10 pr-4 py-3 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500"
+                    placeholder="Search by transaction ID or asset"
+                    className="h-12 w-full rounded-2xl border border-white/10 bg-white/5 pl-11 pr-4 text-sm text-white outline-none placeholder:text-slate-400 focus:border-cyan-400/40 focus:bg-white/10"
                   />
                 </div>
 
                 <button
-                  onClick={() => setBalanceVisible((v) => !v)}
-                  className="w-11 h-11 rounded-2xl border border-white/8 bg-white/[0.04] hover:bg-white/[0.07] flex items-center justify-center text-slate-300"
+                  onClick={() => setShowBalance((s) => !s)}
+                  className="hidden sm:flex h-12 items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 text-sm text-slate-200 hover:bg-white/10"
                 >
-                  {balanceVisible ? <Eye size={18} /> : <EyeOff size={18} />}
+                  {showBalance ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                  <span>{showBalance ? "Hide" : "Show"}</span>
                 </button>
 
-                <button className="relative w-11 h-11 rounded-2xl border border-white/8 bg-white/[0.04] hover:bg-white/[0.07] flex items-center justify-center text-slate-300">
-                  <Bell size={18} />
-                  {unreadNotifications > 0 && (
-                    <span className="absolute top-2 right-2 w-2.5 h-2.5 rounded-full bg-rose-500" />
+                <div className="relative">
+                  <button
+                    onClick={() => setShowNotifications((s) => !s)}
+                    className="relative flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10"
+                  >
+                    <Bell className="h-5 w-5 text-slate-200" />
+                    {unreadCount > 0 && (
+                      <span className="absolute right-3 top-3 h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-[#081120]" />
+                    )}
+                  </button>
+
+                  {showNotifications && (
+                    <div className="absolute right-0 mt-3 w-80 rounded-3xl border border-white/10 bg-[#0F1B33]/95 p-3 shadow-2xl backdrop-blur-xl">
+                      <div className="mb-2 px-2 text-sm font-semibold">Notifications</div>
+                      <div className="space-y-2">
+                        {mockNotifications.map((item) => (
+                          <div
+                            key={item.id}
+                            className="rounded-2xl bg-white/5 px-3 py-3"
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <div className="text-sm text-white">{item.text}</div>
+                                <div className="mt-1 text-xs text-slate-400">{item.time}</div>
+                              </div>
+                              {item.unread && (
+                                <span className="mt-1 h-2 w-2 rounded-full bg-rose-500" />
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   )}
-                </button>
-
-                <div className="rounded-2xl border border-white/8 bg-white/[0.04] px-4 py-3">
-                  <div className="text-sm font-semibold text-white">{fullName}</div>
-                  <div className="text-xs text-slate-400">{userData.email || user.email}</div>
                 </div>
+
+                <button className="flex h-12 items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-3 sm:px-4 hover:bg-white/10">
+                  <img
+                    src="https://i.pravatar.cc/100?img=12"
+                    alt="User"
+                    className="h-8 w-8 rounded-full object-cover"
+                  />
+                  <div className="hidden md:block text-left">
+                    <div className="text-sm font-medium">Michael Carter</div>
+                    <div className="text-xs text-slate-400">Client account</div>
+                  </div>
+                  <ChevronDown className="hidden md:block h-4 w-4 text-slate-400" />
+                </button>
               </div>
             </div>
           </header>
 
-          <div className="px-4 md:px-8 py-6 md:py-8 space-y-6">
-            {(!userData.kycStatus || userData.kycStatus !== "verified") && (
-              <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 px-5 py-4 text-amber-200 flex items-start gap-3">
-                <ShieldAlert size={18} className="mt-0.5" />
-                <div>
-                  <div className="font-semibold">Your profile is not verified.</div>
-                  <div className="text-sm text-amber-100/80 mt-1">
-                    Complete KYC to unlock higher limits and extended account access.
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {!userData.twoFactorEnabled && (
-              <div className="rounded-2xl border border-orange-500/20 bg-orange-500/10 px-5 py-4 text-orange-200 flex items-start gap-3">
-                <ShieldAlert size={18} className="mt-0.5" />
-                <div>
-                  <div className="font-semibold">Enable 2FA for better security.</div>
-                  <div className="text-sm text-orange-100/80 mt-1">
-                    Protect your wallet with two-factor authentication.
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <section className="grid xl:grid-cols-[1.1fr_0.9fr] gap-6">
-              <div className="rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-6 shadow-[0_12px_30px_rgba(0,0,0,0.14)]">
-                <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-6">
-                  <div>
-                    <div className="text-[11px] uppercase tracking-[0.22em] text-white/35 font-bold mb-2">
+          <main className="px-4 py-6 sm:px-6 lg:px-8">
+            {/* Top cards */}
+            <div className="grid grid-cols-1 gap-6 2xl:grid-cols-[1.45fr_1fr]">
+              {/* Total Assets */}
+              <section className="overflow-hidden rounded-[28px] border border-cyan-300/10 bg-[linear-gradient(135deg,rgba(59,130,246,0.16),rgba(34,211,238,0.10),rgba(139,92,246,0.14))] p-5 sm:p-6 lg:p-7 shadow-[0_20px_60px_rgba(0,0,0,0.28)]">
+                <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium uppercase tracking-[0.18em] text-cyan-200/80">
                       Total Assets
                     </div>
-                    <div className="text-4xl md:text-5xl font-black tracking-tight">
-                      {balanceVisible
-                        ? `$${totalAssets.toLocaleString(undefined, {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2
-                          })}`
-                        : "••••••••"}
-                    </div>
-                    <div
-                      className={`mt-3 text-sm font-semibold ${
-                        dayChange >= 0 ? "text-emerald-300" : "text-rose-300"
-                      }`}
-                    >
-                      {dayChange >= 0 ? "+" : ""}
-                      {dayChange.toFixed(2)}% today
-                    </div>
-                  </div>
 
-                  <div
-                    className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl border text-sm w-fit ${
-                      userData.online
-                        ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300"
-                        : "border-white/10 bg-white/[0.04] text-slate-300"
-                    }`}
-                  >
-                    {userData.online ? <Wifi size={16} /> : <WifiOff size={16} />}
-                    <span>{userData.online ? "Online" : "Offline"}</span>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-                  <div className="rounded-[24px] border border-white/8 bg-black/20 p-5">
-                    <div className="flex items-center gap-3 mb-4 text-amber-300">
-                      <Bitcoin size={18} />
-                      <span className="text-sm text-slate-400">BTC</span>
-                    </div>
-                    <div className="text-2xl font-black">
-                      {balanceVisible ? balances.btc.toFixed(8) : "••••••"}
-                    </div>
-                  </div>
-
-                  <div className="rounded-[24px] border border-white/8 bg-black/20 p-5">
-                    <div className="flex items-center gap-3 mb-4 text-slate-300">
-                      <Coins size={18} />
-                      <span className="text-sm text-slate-400">ETH</span>
-                    </div>
-                    <div className="text-2xl font-black">
-                      {balanceVisible ? balances.eth.toFixed(8) : "••••••"}
-                    </div>
-                  </div>
-
-                  <div className="rounded-[24px] border border-white/8 bg-black/20 p-5">
-                    <div className="flex items-center gap-3 mb-4 text-emerald-300">
-                      <Wallet size={18} />
-                      <span className="text-sm text-slate-400">USDT</span>
-                    </div>
-                    <div className="text-2xl font-black">
-                      {balanceVisible ? balances.usdt.toFixed(2) : "••••••"}
-                    </div>
-                  </div>
-
-                  <div className="rounded-[24px] border border-white/8 bg-black/20 p-5">
-                    <div className="flex items-center gap-3 mb-4 text-blue-300">
-                      <Landmark size={18} />
-                      <span className="text-sm text-slate-400">USD</span>
-                    </div>
-                    <div className="text-2xl font-black">
-                      {balanceVisible
-                        ? `$${balances.usd.toLocaleString(undefined, {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2
-                          })}`
-                        : "••••••"}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.035),rgba(255,255,255,0.02))] p-6 shadow-[0_12px_30px_rgba(0,0,0,0.14)]">
-                <div className="text-[11px] uppercase tracking-[0.22em] text-white/35 font-bold mb-5">
-                  Profile Snapshot
-                </div>
-
-                <div className="space-y-3">
-                  <div className="rounded-2xl border border-white/8 bg-black/20 px-4 py-4 flex items-start gap-3">
-                    <Mail size={16} className="text-blue-300 mt-0.5 shrink-0" />
-                    <div className="min-w-0">
-                      <div className="text-sm text-slate-400">Email</div>
-                      <div className="font-medium break-all">{userData.email || user.email}</div>
-                    </div>
-                  </div>
-
-                  <div className="rounded-2xl border border-white/8 bg-black/20 px-4 py-4 flex items-start gap-3">
-                    <Phone size={16} className="text-blue-300 mt-0.5 shrink-0" />
-                    <div>
-                      <div className="text-sm text-slate-400">Phone</div>
-                      <div className="font-medium">{userData.phone || "-"}</div>
-                    </div>
-                  </div>
-
-                  <div className="rounded-2xl border border-white/8 bg-black/20 px-4 py-4 flex items-start gap-3">
-                    <Globe size={16} className="text-blue-300 mt-0.5 shrink-0" />
-                    <div>
-                      <div className="text-sm text-slate-400">Country / Region</div>
-                      <div className="font-medium">
-                        {userData.country || "-"}
-                        {userData.stateRegion ? ` / ${userData.stateRegion}` : ""}
+                    <div className="mt-4 flex flex-wrap items-end gap-3">
+                      <div className="min-w-0 max-w-full text-3xl font-semibold leading-none tracking-tight sm:text-4xl lg:text-5xl tabular-nums">
+                        {showBalance ? formatMoney(totalAssets) : "••••••••"}
                       </div>
-                    </div>
-                  </div>
 
-                  <div className="rounded-2xl border border-white/8 bg-black/20 px-4 py-4 flex items-start gap-3">
-                    <MapPin size={16} className="text-blue-300 mt-0.5 shrink-0" />
-                    <div>
-                      <div className="text-sm text-slate-400">Location</div>
-                      <div className="font-medium">{locationText || "-"}</div>
-                    </div>
-                  </div>
-
-                  <div className="rounded-2xl border border-white/8 bg-black/20 px-4 py-4 flex items-start gap-3">
-                    <Clock3 size={16} className="text-blue-300 mt-0.5 shrink-0" />
-                    <div>
-                      <div className="text-sm text-slate-400">Last Seen</div>
-                      <div className="font-medium">
-                        {formatLastSeen(userData.last_seen, userData.lastSeen)}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            <section className="rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.035),rgba(255,255,255,0.02))] p-6 shadow-[0_12px_30px_rgba(0,0,0,0.14)]">
-              <div className="text-[11px] uppercase tracking-[0.22em] text-white/35 font-bold mb-5">
-                Quick Actions
-              </div>
-
-              <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-4">
-                {[
-                  {
-                    label: "Deposit",
-                    icon: ArrowDownLeft,
-                    cls: "bg-emerald-500/15 border-emerald-400/20 text-emerald-300"
-                  },
-                  {
-                    label: "Withdraw",
-                    icon: ArrowUpRight,
-                    cls: "bg-rose-500/15 border-rose-400/20 text-rose-300"
-                  },
-                  {
-                    label: "Transfer",
-                    icon: Repeat,
-                    cls: "bg-blue-500/15 border-blue-400/20 text-blue-300"
-                  },
-                  {
-                    label: "Buy Crypto",
-                    icon: CreditCard,
-                    cls: "bg-amber-500/15 border-amber-400/20 text-amber-300"
-                  }
-                ].map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <button
-                      key={item.label}
-                      className={`rounded-[24px] border border-white/8 bg-black/20 p-5 flex items-center gap-4 hover:scale-[1.02] transition-all ${buttonFx}`}
-                    >
                       <div
-                        className={`w-12 h-12 rounded-2xl border flex items-center justify-center shrink-0 ${item.cls}`}
+                        className={`mb-1 inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm font-medium ${
+                          total24hPercent >= 0
+                            ? "bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-400/20"
+                            : "bg-rose-500/15 text-rose-300 ring-1 ring-rose-400/20"
+                        }`}
                       >
-                        <Icon size={18} />
+                        {total24hPercent >= 0 ? (
+                          <TrendingUp className="h-4 w-4" />
+                        ) : (
+                          <TrendingDown className="h-4 w-4" />
+                        )}
+                        {Math.abs(total24hPercent).toFixed(2)}% today
                       </div>
-                      <div className="font-semibold relative z-10">{item.label}</div>
-                      <ChevronRight size={16} className="ml-auto text-slate-500 relative z-10" />
-                    </button>
-                  );
-                })}
-              </div>
-            </section>
+                    </div>
 
-            <section className="grid xl:grid-cols-[0.9fr_1.1fr] gap-6">
-              <div className="rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.035),rgba(255,255,255,0.02))] p-6 shadow-[0_12px_30px_rgba(0,0,0,0.14)]">
-                <div className="text-[11px] uppercase tracking-[0.22em] text-white/35 font-bold mb-5">
-                  Asset Allocation
-                </div>
-
-                <div className="flex flex-col lg:flex-row gap-6 items-center">
-                  <div className="relative w-[220px] h-[220px] shrink-0">
-                    <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
-                      <circle
-                        cx="18"
-                        cy="18"
-                        r="15.915"
-                        fill="none"
-                        stroke="rgba(255,255,255,0.08)"
-                        strokeWidth="3"
-                      />
-                      {donut.map((item, index) => (
-                        <circle
-                          key={index}
-                          cx="18"
-                          cy="18"
-                          r="15.915"
-                          fill="none"
-                          stroke={item.color}
-                          strokeWidth="3"
-                          strokeDasharray={`${item.percent} ${100 - item.percent}`}
-                          strokeDashoffset={-item.start}
-                        />
-                      ))}
-                    </svg>
-                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <div className="text-sm text-slate-400">Portfolio</div>
-                      <div className="text-2xl font-black">
-                        {balanceVisible
-                          ? `$${totalAssets.toLocaleString(undefined, {
-                              minimumFractionDigits: 0,
-                              maximumFractionDigits: 0
-                            })}`
-                          : "••••••"}
-                      </div>
+                    <div className="mt-4 text-sm text-slate-300">
+                      {showBalance
+                        ? `Portfolio value across ${assetRows.length} crypto assets`
+                        : "Balance hidden for privacy"}
                     </div>
                   </div>
 
-                  <div className="w-full space-y-3">
-                    {assetRows.map((item) => (
-                      <div
-                        key={item.symbol}
-                        className="rounded-2xl border border-white/8 bg-black/20 px-4 py-4"
+                  <div className="grid w-full grid-cols-2 gap-3 sm:gap-4 lg:max-w-sm">
+                    <div className="rounded-3xl bg-white/8 p-4 ring-1 ring-white/10">
+                      <div className="text-xs uppercase tracking-[0.15em] text-slate-400">
+                        24H P/L
+                      </div>
+                      <div className="mt-2 text-lg font-semibold tabular-nums">
+                        {showBalance ? formatMoney(total24hChangeValue) : "••••••"}
+                      </div>
+                    </div>
+                    <div className="rounded-3xl bg-white/8 p-4 ring-1 ring-white/10">
+                      <div className="text-xs uppercase tracking-[0.15em] text-slate-400">
+                        Assets
+                      </div>
+                      <div className="mt-2 text-lg font-semibold">{assetRows.length}</div>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              {/* Quick Actions */}
+              <section className="rounded-[28px] border border-white/10 bg-white/5 p-5 sm:p-6 lg:p-7 backdrop-blur-xl shadow-[0_20px_60px_rgba(0,0,0,0.22)]">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-sm font-medium uppercase tracking-[0.18em] text-slate-400">
+                      Quick Actions
+                    </div>
+                    <div className="mt-1 text-lg font-semibold">Move funds faster</div>
+                  </div>
+                </div>
+
+                <div className="mt-6 grid grid-cols-2 gap-4">
+                  {[
+                    {
+                      label: "Deposit",
+                      icon: ArrowDownLeft,
+                      cls: "from-emerald-500/25 to-cyan-500/15 text-emerald-300",
+                    },
+                    {
+                      label: "Withdraw",
+                      icon: ArrowUpRight,
+                      cls: "from-rose-500/25 to-orange-500/15 text-orange-300",
+                    },
+                    {
+                      label: "Transfer",
+                      icon: Send,
+                      cls: "from-blue-500/25 to-cyan-500/15 text-sky-300",
+                    },
+                    {
+                      label: "Buy Crypto",
+                      icon: CreditCard,
+                      cls: "from-violet-500/25 to-fuchsia-500/15 text-violet-300",
+                    },
+                  ].map((action) => {
+                    const Icon = action.icon;
+                    return (
+                      <button
+                        key={action.label}
+                        className={`group rounded-3xl bg-gradient-to-br ${action.cls} p-4 sm:p-5 text-left ring-1 ring-white/10 transition duration-200 hover:scale-[1.02] hover:ring-white/20`}
                       >
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="flex items-center gap-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10">
+                            <Icon className="h-5 w-5" />
+                          </div>
+                          <ChevronDown className="h-4 w-4 rotate-[-90deg] opacity-50 transition group-hover:translate-x-1" />
+                        </div>
+                        <div className="mt-6 text-sm font-semibold sm:text-base">
+                          {action.label}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+            </div>
+
+            {/* Middle */}
+            <div className="mt-6 grid grid-cols-1 gap-6 2xl:grid-cols-[1.25fr_1fr]">
+              {/* Asset Allocation */}
+              <section className="rounded-[28px] border border-white/10 bg-white/5 p-5 sm:p-6 lg:p-7 backdrop-blur-xl">
+                <div className="flex flex-col gap-6 xl:flex-row">
+                  <div className="xl:w-[320px]">
+                    <div className="text-sm font-medium uppercase tracking-[0.18em] text-slate-400">
+                      Asset Allocation
+                    </div>
+                    <div className="mt-1 text-lg font-semibold">Portfolio breakdown</div>
+
+                    <div className="mt-6 h-[280px] w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={donutData}
+                            dataKey="value"
+                            nameKey="name"
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={78}
+                            outerRadius={110}
+                            paddingAngle={3}
+                          >
+                            {donutData.map((_, index) => (
+                              <Cell key={index} fill={COLORS[index % COLORS.length]} />
+                            ))}
+                          </Pie>
+                          <Tooltip
+                            formatter={(value: number, name: string) => [
+                              formatMoney(value),
+                              name,
+                            ]}
+                            contentStyle={{
+                              background: "#0F1B33",
+                              border: "1px solid rgba(255,255,255,0.08)",
+                              borderRadius: 16,
+                            }}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="space-y-3">
+                      {assetRows.map((asset, index) => (
+                        <div
+                          key={asset.id}
+                          className="flex flex-wrap items-center justify-between gap-4 rounded-3xl bg-white/5 p-4 ring-1 ring-white/8"
+                        >
+                          <div className="flex min-w-0 items-center gap-3">
                             <div
-                              className="w-3 h-3 rounded-full"
-                              style={{ backgroundColor: item.color }}
-                            />
-                            <div>
-                              <div className="font-semibold">{item.symbol}</div>
+                              className="h-11 w-11 rounded-2xl ring-1 ring-white/10 flex items-center justify-center overflow-hidden"
+                              style={{
+                                background:
+                                  "linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03))",
+                              }}
+                            >
+                              {asset.image ? (
+                                <img
+                                  src={asset.image}
+                                  alt={asset.name}
+                                  className="h-7 w-7 object-contain"
+                                />
+                              ) : (
+                                <span className="text-xs font-bold">{asset.symbol}</span>
+                              )}
+                            </div>
+
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">{asset.name}</span>
+                                <span
+                                  className="h-2.5 w-2.5 rounded-full"
+                                  style={{
+                                    backgroundColor: COLORS[index % COLORS.length],
+                                  }}
+                                />
+                              </div>
                               <div className="text-sm text-slate-400">
-                                {balanceVisible ? item.amount.toFixed(item.symbol === "USDT" ? 2 : 8) : "••••••"}
+                                {asset.symbol} • {formatCoinAmount(asset.amount)}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="grid min-w-[200px] grid-cols-2 gap-4 sm:min-w-[300px]">
+                            <div className="text-right">
+                              <div className="text-xs uppercase tracking-[0.14em] text-slate-500">
+                                Price
+                              </div>
+                              <div className="mt-1 text-sm font-medium tabular-nums">
+                                {showBalance ? formatMoney(asset.currentPrice) : "••••••"}
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-xs uppercase tracking-[0.14em] text-slate-500">
+                                Value
+                              </div>
+                              <div className="mt-1 text-sm font-semibold tabular-nums">
+                                {showBalance ? formatMoney(asset.totalValue) : "••••••"}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              {/* Live Market Prices */}
+              <section className="rounded-[28px] border border-white/10 bg-white/5 p-5 sm:p-6 lg:p-7 backdrop-blur-xl">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-sm font-medium uppercase tracking-[0.18em] text-slate-400">
+                      Live Market Prices
+                    </div>
+                    <div className="mt-1 text-lg font-semibold">Top crypto movers</div>
+                  </div>
+
+                  <div className="rounded-full bg-cyan-500/10 px-3 py-1 text-xs text-cyan-300 ring-1 ring-cyan-400/20">
+                    Auto refresh
+                  </div>
+                </div>
+
+                <div className="mt-6 space-y-3">
+                  {loadingMarket && market.length === 0 ? (
+                    <div className="rounded-3xl bg-white/5 p-6 text-sm text-slate-400">
+                      Loading market data...
+                    </div>
+                  ) : (
+                    market.map((coin) => {
+                      const positive = (coin.price_change_percentage_24h || 0) >= 0;
+                      return (
+                        <div
+                          key={coin.id}
+                          className="flex items-center justify-between gap-4 rounded-3xl bg-white/5 p-4 ring-1 ring-white/8"
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <img
+                              src={coin.image}
+                              alt={coin.name}
+                              className="h-10 w-10 rounded-full"
+                            />
+                            <div className="min-w-0">
+                              <div className="font-medium">{coin.name}</div>
+                              <div className="text-sm text-slate-400 uppercase">
+                                {coin.symbol}
                               </div>
                             </div>
                           </div>
 
                           <div className="text-right">
-                            <div className="font-semibold">
-                              {balanceVisible
-                                ? `$${item.total.toLocaleString(undefined, {
-                                    minimumFractionDigits: 2,
-                                    maximumFractionDigits: 2
-                                  })}`
-                                : "••••••"}
+                            <div className="font-semibold tabular-nums">
+                              {formatMoney(coin.current_price)}
                             </div>
-                            <div className="text-sm text-slate-400">
-                              ${item.price.toLocaleString()}
+                            <div
+                              className={`mt-1 text-sm ${
+                                positive ? "text-emerald-300" : "text-rose-300"
+                              }`}
+                            >
+                              {positive ? "+" : ""}
+                              {coin.price_change_percentage_24h?.toFixed(2)}%
                             </div>
                           </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </section>
+            </div>
+
+            {/* Transactions */}
+            <section className="mt-6 rounded-[28px] border border-white/10 bg-white/5 p-5 sm:p-6 lg:p-7 backdrop-blur-xl">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <div className="text-sm font-medium uppercase tracking-[0.18em] text-slate-400">
+                    Recent Transactions
+                  </div>
+                  <div className="mt-1 text-lg font-semibold">Latest activity</div>
+                </div>
+
+                <button className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-200 hover:bg-white/10">
+                  <Copy className="h-4 w-4" />
+                  Export
+                </button>
+              </div>
+
+              <div className="mt-6 overflow-x-auto">
+                <div className="min-w-[820px]">
+                  <div className="grid grid-cols-[1.4fr_0.9fr_1fr_1fr_1fr] gap-4 px-4 py-3 text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
+                    <div>Type</div>
+                    <div>Asset</div>
+                    <div>Amount</div>
+                    <div>Status</div>
+                    <div>Date</div>
+                  </div>
+
+                  <div className="space-y-3">
+                    {filteredTransactions.slice(0, 10).map((tx) => (
+                      <div
+                        key={tx.id}
+                        className="grid grid-cols-[1.4fr_0.9fr_1fr_1fr_1fr] gap-4 rounded-3xl bg-white/5 px-4 py-4 ring-1 ring-white/8 transition hover:bg-white/[0.07]"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/8">
+                            {getTypeIcon(tx.type)}
+                          </div>
+                          <div>
+                            <div className="font-medium">{tx.type}</div>
+                            <div className="text-sm text-slate-400">{tx.id}</div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center">
+                          <span className="rounded-full bg-white/8 px-3 py-1 text-sm font-medium">
+                            {tx.asset}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center">
+                          <div>
+                            <div className="font-medium tabular-nums">
+                              {formatCoinAmount(tx.amount)} {tx.asset}
+                            </div>
+                            <div className="text-sm text-slate-400 tabular-nums">
+                              {showBalance ? formatMoney(tx.usdValue) : "••••••"}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center">
+                          <span
+                            className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium ${getStatusClass(
+                              tx.status
+                            )}`}
+                          >
+                            {tx.status === "Completed" && (
+                              <CheckCircle2 className="h-4 w-4" />
+                            )}
+                            {tx.status}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center text-sm text-slate-300">
+                          {tx.date}
                         </div>
                       </div>
                     ))}
                   </div>
                 </div>
               </div>
-
-              <div className="rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.035),rgba(255,255,255,0.02))] p-6 shadow-[0_12px_30px_rgba(0,0,0,0.14)]">
-                <div className="text-[11px] uppercase tracking-[0.22em] text-white/35 font-bold mb-5">
-                  Live Market Prices
-                </div>
-
-                <div className="space-y-3">
-                  {marketData.map((item) => (
-                    <div
-                      key={item.symbol}
-                      className="rounded-2xl border border-white/8 bg-black/20 px-4 py-4 flex items-center justify-between gap-4"
-                    >
-                      <div>
-                        <div className="font-semibold">{item.symbol}</div>
-                        <div className="text-sm text-slate-400">Live market feed</div>
-                      </div>
-
-                      <div className="text-right">
-                        <div className="font-semibold">${item.price.toLocaleString()}</div>
-                        <div
-                          className={`text-sm font-medium ${
-                            item.change >= 0 ? "text-emerald-300" : "text-rose-300"
-                          }`}
-                        >
-                          {item.change >= 0 ? "+" : ""}
-                          {item.change.toFixed(2)}%
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
             </section>
 
-            <section className="rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.035),rgba(255,255,255,0.02))] p-6 shadow-[0_12px_30px_rgba(0,0,0,0.14)]">
-              <div className="text-[11px] uppercase tracking-[0.22em] text-white/35 font-bold mb-5">
-                Recent Transactions
-              </div>
+            {/* Mobile balance toggle */}
+            <div className="mt-6 sm:hidden">
+              <button
+                onClick={() => setShowBalance((s) => !s)}
+                className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 text-sm text-slate-200 hover:bg-white/10"
+              >
+                {showBalance ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                <span>{showBalance ? "Hide Balance" : "Show Balance"}</span>
+              </button>
+            </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[760px]">
-                  <thead>
-                    <tr className="text-left text-sm text-slate-400 border-b border-white/8">
-                      <th className="pb-4 font-medium">Type</th>
-                      <th className="pb-4 font-medium">Asset</th>
-                      <th className="pb-4 font-medium">Amount</th>
-                      <th className="pb-4 font-medium">Status</th>
-                      <th className="pb-4 font-medium">Date</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {searchedTransactions.length === 0 ? (
-                      <tr>
-                        <td colSpan={5} className="py-8 text-center text-slate-500">
-                          No transactions found.
-                        </td>
-                      </tr>
-                    ) : (
-                      searchedTransactions.slice(0, 10).map((tx) => {
-                        const asset = tx.currency || tx.asset || "-";
-                        const type = tx.type || "transaction";
-
-                        return (
-                          <tr
-                            key={tx.id}
-                            className="border-b border-white/5 text-sm text-slate-200"
-                          >
-                            <td className="py-4">
-                              <div className="flex items-center gap-2">
-                                {type === "withdraw" ? (
-                                  <ArrowUpRight size={15} className="text-rose-300" />
-                                ) : (
-                                  <ArrowDownLeft size={15} className="text-emerald-300" />
-                                )}
-                                <span className="capitalize">{type}</span>
-                              </div>
-                            </td>
-                            <td className="py-4">{asset}</td>
-                            <td className="py-4">{tx.amount || "-"}</td>
-                            <td className="py-4">
-                              <div
-                                className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border ${statusPill(
-                                  tx.status
-                                )}`}
-                              >
-                                {statusIcon(tx.status)}
-                                <span className="capitalize">{tx.status || "unknown"}</span>
-                              </div>
-                            </td>
-                            <td className="py-4 text-slate-400">
-                              {formatDate(tx.created_at, tx.date)}
-                            </td>
-                          </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-          </div>
-        </main>
+            {/* Footer user action */}
+            <div className="mt-6 flex justify-end">
+              <button className="inline-flex items-center gap-2 rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 py-2 text-sm text-rose-200 hover:bg-rose-500/15">
+                <LogOut className="h-4 w-4" />
+                Logout
+              </button>
+            </div>
+          </main>
+        </div>
       </div>
     </div>
   );
