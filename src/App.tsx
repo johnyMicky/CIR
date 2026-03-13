@@ -778,6 +778,7 @@ function App() {
       >
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/my-wallets" element={<MyWallets />} />
+        <Route path="/send-receive" element={<SendReceive />} />
         <Route path="/history" element={<History />} />
       </Route>
 
