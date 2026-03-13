@@ -413,29 +413,29 @@ const MyWallets = () => {
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(340px,0.95fr)]">
         <section className="overflow-hidden rounded-[28px] border border-cyan-300/10 bg-[linear-gradient(135deg,rgba(59,130,246,0.16),rgba(34,211,238,0.10),rgba(139,92,246,0.14))] p-5 shadow-[0_20px_60px_rgba(0,0,0,0.28)] sm:p-6 lg:p-7">
-          <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-            <div className="min-w-0">
+          <div className="flex h-full flex-col gap-5">
+            <div>
               <div className="text-sm font-medium uppercase tracking-[0.18em] text-cyan-200/80">
                 Total Wallet Value
               </div>
 
-              <div className="mt-6">
-                <div className="max-w-full overflow-hidden text-ellipsis text-[44px] font-semibold leading-[0.95] tracking-tight tabular-nums sm:text-[56px] lg:text-[64px] 2xl:text-[72px]">
+              <div className="mt-5">
+                <div className="max-w-full text-[44px] font-semibold leading-[0.95] tracking-tight tabular-nums sm:text-[56px] lg:text-[64px] 2xl:text-[72px]">
                   {showBalance ? formatMoney(totalAssets) : "••••••••"}
                 </div>
               </div>
 
-              <div className="mt-6 max-w-md text-base leading-8 text-slate-300">
+              <div className="mt-5 max-w-md text-base leading-8 text-slate-300">
                 Combined value across {walletRows.length} active crypto wallets
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="rounded-[26px] bg-white/8 p-5 ring-1 ring-white/10">
                 <div className="text-xs uppercase tracking-[0.22em] text-slate-400">
                   Available
                 </div>
-                <div className="mt-4 overflow-hidden text-[26px] font-semibold leading-none tracking-tight tabular-nums sm:text-[30px]">
+                <div className="mt-4 text-[28px] font-semibold leading-none tracking-tight tabular-nums sm:text-[32px]">
                   {showBalance ? formatMoney(totalAvailable) : "••••••"}
                 </div>
               </div>
@@ -444,36 +444,36 @@ const MyWallets = () => {
                 <div className="text-xs uppercase tracking-[0.22em] text-slate-400">
                   Locked
                 </div>
-                <div className="mt-4 overflow-hidden text-[26px] font-semibold leading-none tracking-tight tabular-nums sm:text-[30px]">
+                <div className="mt-4 text-[28px] font-semibold leading-none tracking-tight tabular-nums sm:text-[32px]">
                   {showBalance ? formatMoney(totalLocked) : "••••••"}
                 </div>
               </div>
+            </div>
 
-              <div className="rounded-[26px] bg-white/8 p-5 ring-1 ring-white/10 sm:col-span-2">
-                <div className="text-xs uppercase tracking-[0.22em] text-slate-400">
-                  Best 24H Performer
-                </div>
+            <div className="rounded-[26px] bg-white/8 p-5 ring-1 ring-white/10">
+              <div className="text-xs uppercase tracking-[0.22em] text-slate-400">
+                Best 24H Performer
+              </div>
 
-                <div className="mt-4 flex items-center gap-3">
-                  {bestPerformer?.image ? (
-                    <img
-                      src={bestPerformer.image}
-                      alt={bestPerformer.name}
-                      className="h-11 w-11 rounded-full"
-                    />
-                  ) : (
-                    <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white/10">
-                      <Wallet className="h-4 w-4" />
-                    </div>
-                  )}
+              <div className="mt-4 flex items-center gap-3">
+                {bestPerformer?.image ? (
+                  <img
+                    src={bestPerformer.image}
+                    alt={bestPerformer.name}
+                    className="h-11 w-11 rounded-full"
+                  />
+                ) : (
+                  <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white/10">
+                    <Wallet className="h-4 w-4" />
+                  </div>
+                )}
 
-                  <div className="min-w-0">
-                    <div className="truncate text-[18px] font-semibold">
-                      {bestPerformer?.name || "—"}
-                    </div>
-                    <div className="mt-1 text-[18px] font-medium text-emerald-300 tabular-nums">
-                      {bestPerformer ? `${bestPerformer.priceChange.toFixed(2)}%` : "—"}
-                    </div>
+                <div className="min-w-0">
+                  <div className="truncate text-[18px] font-semibold">
+                    {bestPerformer?.name || "—"}
+                  </div>
+                  <div className="mt-1 text-[18px] font-medium text-emerald-300 tabular-nums">
+                    {bestPerformer ? `${bestPerformer.priceChange.toFixed(2)}%` : "—"}
                   </div>
                 </div>
               </div>
