@@ -43,7 +43,7 @@ const AppShell = () => {
     { key: "swap", label: "Exchange / Swap", icon: RefreshCw, path: "/exchange" },
     { key: "history", label: "Transactions History", icon: History, path: "/history" },
     { key: "settings", label: "Settings", icon: Settings, path: "/settings" },
-    { key: "support", label: "Support / Help", icon: LifeBuoy },
+    { key: "support", label: "Support / Help", icon: LifeBuoy, path: "/support" },
   ];
 
   const activeKey = useMemo<SidebarKey>(() => {
@@ -53,6 +53,7 @@ const AppShell = () => {
     if (location.pathname.startsWith("/settings")) return "settings";
     if (location.pathname.startsWith("/exchange")) return "swap";
     if (location.pathname.startsWith("/dashboard")) return "dashboard";
+    if (location.pathname.startsWith("/support")) return "support";
     return "dashboard";
   }, [location.pathname]);
 
