@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { 
   ShieldCheck, ArrowLeft, History as HistoryIcon, 
   ArrowDownLeft, ArrowUpRight, Clock3, LayoutDashboard, 
-  Settings, Lock, Activity, Search, Filter, Terminal
+  Settings, Lock, Activity, Search, Terminal, RefreshCw // <-- იმპორტი დამატებულია
 } from "lucide-react";
 import { db } from "../firebase";
 import { useAuth } from "../context/AuthContext";
@@ -67,7 +67,7 @@ const History = () => {
       {/* MAIN CONTENT */}
       <main className="lg:ml-64 p-4 md:p-8">
         
-        {/* LOG STATUS BAR - ახალი ანიმაციური ბარი */}
+        {/* LOG STATUS BAR */}
         <div className="flex flex-wrap items-center justify-between gap-6 mb-8 bg-white/[0.02] border border-white/5 p-4 rounded-2xl">
             <div className="flex items-center gap-6">
                 <div className="flex items-center gap-2">
@@ -97,21 +97,15 @@ const History = () => {
                   <h1 className="text-4xl font-black text-white tracking-tighter italic uppercase">Transaction Logs</h1>
                   <p className="text-slate-500 mt-2 font-medium italic">Encrypted record of all inbound and outbound node activities.</p>
               </div>
-              <div className="flex gap-3">
-                  <div className="bg-[#0b0e14] border border-white/5 rounded-xl px-4 py-2 flex items-center gap-2 text-slate-500">
-                      <Search size={16} />
-                      <input type="text" placeholder="Search Hash..." className="bg-transparent border-none outline-none text-xs font-bold w-32" />
-                  </div>
+              <div className="bg-[#0b0e14] border border-white/5 rounded-xl px-4 py-2 flex items-center gap-2 text-slate-500">
+                  <Search size={16} />
+                  <input type="text" placeholder="Search Hash..." className="bg-transparent border-none outline-none text-xs font-bold w-32" />
               </div>
           </div>
         </header>
 
         {/* LOG TABLE */}
         <div className="bg-[#0b0e14] border border-white/5 rounded-[40px] overflow-hidden shadow-2xl relative">
-          <div className="absolute top-0 right-0 p-10 opacity-[0.02] pointer-events-none">
-              <HistoryIcon size={300} />
-          </div>
-          
           <div className="overflow-x-auto relative z-10">
             <table className="w-full text-left">
               <thead>
