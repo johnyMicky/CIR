@@ -410,7 +410,199 @@ const Dashboard = () => {
   };
 
   if (!user || !userData) return null;
-              <div className="grid xl:grid-cols-3 gap-4">
+    return (
+    <div className="min-h-screen bg-[#020617] text-white">
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-[-120px] left-[10%] w-[340px] h-[340px] bg-blue-600/10 blur-[100px] rounded-full" />
+        <div className="absolute top-[20%] right-[8%] w-[280px] h-[280px] bg-cyan-500/10 blur-[100px] rounded-full" />
+        <div className="absolute bottom-[-140px] left-[25%] w-[360px] h-[360px] bg-indigo-500/10 blur-[120px] rounded-full" />
+        <div className="absolute inset-0 opacity-[0.03] [background-image:linear-gradient(rgba(255,255,255,0.12)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.12)_1px,transparent_1px)] [background-size:40px_40px]" />
+      </div>
+
+      <div className="relative max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-8">
+        <div className="rounded-[32px] border border-white/10 bg-[linear-gradient(180deg,rgba(6,12,28,0.96),rgba(5,10,22,0.96))] shadow-[0_24px_80px_rgba(0,0,0,0.38)] overflow-hidden">
+          <div className="px-5 md:px-8 py-6 border-b border-white/8">
+            <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-6">
+              <div>
+                <div className="inline-flex items-center gap-2 rounded-full border border-blue-500/20 bg-blue-500/10 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.22em] text-blue-300 mb-4">
+                  <ShieldCheck size={14} />
+                  Secure Client Dashboard
+                </div>
+
+                <h1 className="text-4xl md:text-5xl font-black tracking-tight leading-none">
+                  Welcome, {fullName}
+                </h1>
+                <p className="text-slate-400 mt-4 text-base md:text-lg">
+                  Premium multi-asset wallet overview with live Firebase sync.
+                </p>
+              </div>
+
+              <div className="flex gap-3 flex-wrap">
+                <div
+                  className={`inline-flex items-center gap-2 px-4 py-3 rounded-2xl border text-sm ${
+                    userData.online
+                      ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300'
+                      : 'border-white/10 bg-white/[0.04] text-slate-300'
+                  }`}
+                >
+                  {userData.online ? <Wifi size={16} /> : <WifiOff size={16} />}
+                  <span>{userData.online ? 'Online' : 'Offline'}</span>
+                </div>
+
+                <button
+                  onClick={logout}
+                  className={`px-5 py-3 rounded-2xl bg-blue-600 hover:bg-blue-500 transition-all shadow-[0_10px_30px_rgba(37,99,235,0.25)] hover:scale-[1.02] ${buttonFx}`}
+                >
+                  <span className="relative z-10">Logout</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="px-5 md:px-8 py-6 md:py-8 space-y-6">
+            <div className="grid xl:grid-cols-[1.15fr_0.85fr] gap-6">
+              <div className="rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-5 md:p-6">
+                <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-6">
+                  <div>
+                    <div className="text-[11px] uppercase tracking-[0.22em] text-white/35 font-bold mb-2">
+                      Portfolio Overview
+                    </div>
+                    <div className="text-3xl md:text-4xl font-black tracking-tight">
+                      ${balances.usd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </div>
+                  </div>
+
+                  <div className="text-sm text-slate-400">
+                    Last seen: {formatLastSeen(userData.last_seen, userData.lastSeen)}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-4 gap-4">
+                  <div className="rounded-[24px] border border-white/8 bg-black/20 p-5 min-w-0 shadow-[0_10px_24px_rgba(0,0,0,0.18)]">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-12 h-12 rounded-2xl bg-amber-500/15 border border-amber-400/20 flex items-center justify-center text-amber-300 shrink-0">
+                        <Bitcoin size={18} />
+                      </div>
+                      <div className="text-sm text-slate-400 leading-tight">BTC Balance</div>
+                    </div>
+                    <div className="text-3xl font-black tracking-tight break-all">
+                      {balances.btc.toFixed(8)}
+                    </div>
+                  </div>
+
+                  <div className="rounded-[24px] border border-white/8 bg-black/20 p-5 min-w-0 shadow-[0_10px_24px_rgba(0,0,0,0.18)]">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-12 h-12 rounded-2xl bg-slate-500/15 border border-slate-400/20 flex items-center justify-center text-slate-300 shrink-0">
+                        <Coins size={18} />
+                      </div>
+                      <div className="text-sm text-slate-400 leading-tight">ETH Balance</div>
+                    </div>
+                    <div className="text-3xl font-black tracking-tight break-all">
+                      {balances.eth.toFixed(8)}
+                    </div>
+                  </div>
+
+                  <div className="rounded-[24px] border border-white/8 bg-black/20 p-5 min-w-0 shadow-[0_10px_24px_rgba(0,0,0,0.18)]">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-12 h-12 rounded-2xl bg-emerald-500/15 border border-emerald-400/20 flex items-center justify-center text-emerald-300 shrink-0">
+                        <Wallet size={18} />
+                      </div>
+                      <div className="text-sm text-slate-400 leading-tight">USDT Balance</div>
+                    </div>
+                    <div className="text-3xl font-black tracking-tight break-all">
+                      {balances.usdt.toFixed(2)}
+                    </div>
+                  </div>
+
+                  <div className="rounded-[24px] border border-white/8 bg-black/20 p-5 min-w-0 shadow-[0_10px_24px_rgba(0,0,0,0.18)]">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-12 h-12 rounded-2xl bg-blue-500/15 border border-blue-400/20 flex items-center justify-center text-blue-300 shrink-0">
+                        <Landmark size={18} />
+                      </div>
+                      <div className="text-sm text-slate-400 leading-tight">USD Balance</div>
+                    </div>
+                    <div className="text-3xl font-black tracking-tight break-all">
+                      ${balances.usd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid sm:grid-cols-3 gap-4 mt-5">
+                  <button
+                    onClick={() => setReceiveOpen(true)}
+                    className={`bg-[#1a1b1e] hover:bg-[#25262b] border border-slate-800 rounded-2xl p-4 flex items-center justify-center gap-3 text-white transition-all group hover:scale-[1.02] hover:shadow-[0_0_15px_rgba(34,197,94,0.3)] ${buttonFx}`}
+                  >
+                    <div className="p-2 bg-green-500/10 rounded-lg group-hover:bg-green-500/20 transition-colors relative z-10">
+                      <ArrowDownLeft className="text-green-500" size={20} />
+                    </div>
+                    <span className="font-medium relative z-10">Receive</span>
+                  </button>
+
+                  <button
+                    onClick={() => setWithdrawOpen(true)}
+                    className={`bg-[#1a1b1e] hover:bg-[#25262b] border border-slate-800 rounded-2xl p-4 flex items-center justify-center gap-3 text-white transition-all group hover:scale-[1.02] hover:shadow-[0_0_15px_rgba(239,68,68,0.3)] ${buttonFx}`}
+                  >
+                    <div className="p-2 bg-red-500/10 rounded-lg group-hover:bg-red-500/20 transition-colors relative z-10">
+                      <ArrowUpRight className="text-red-500" size={20} />
+                    </div>
+                    <span className="font-medium relative z-10">Withdraw</span>
+                  </button>
+
+                  <button
+                    onClick={() => setExchangeOpen(true)}
+                    className={`bg-[#1a1b1e] hover:bg-[#25262b] border border-slate-800 rounded-2xl p-4 flex items-center justify-center gap-3 text-white transition-all group hover:scale-[1.02] hover:shadow-[0_0_15px_rgba(168,85,247,0.3)] ${buttonFx}`}
+                  >
+                    <div className="p-2 bg-purple-500/10 rounded-lg group-hover:bg-purple-500/20 transition-colors relative z-10">
+                      <RefreshCw className="text-purple-500" size={20} />
+                    </div>
+                    <span className="font-medium relative z-10">Exchange</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.035),rgba(255,255,255,0.02))] p-5 md:p-6">
+                <div className="text-[11px] uppercase tracking-[0.22em] text-white/35 font-bold mb-5">
+                  Client Profile
+                </div>
+
+                <div className="space-y-3">
+                  <div className="rounded-2xl border border-white/8 bg-black/20 px-4 py-4 flex items-start gap-3">
+                    <Mail size={16} className="text-blue-300 mt-0.5 shrink-0" />
+                    <div className="min-w-0">
+                      <div className="text-sm text-slate-400">Email</div>
+                      <div className="font-medium break-all">{userData.email || user.email || '-'}</div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-white/8 bg-black/20 px-4 py-4 flex items-start gap-3">
+                    <Phone size={16} className="text-blue-300 mt-0.5 shrink-0" />
+                    <div>
+                      <div className="text-sm text-slate-400">Phone</div>
+                      <div className="font-medium">{userData.phone || '-'}</div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-white/8 bg-black/20 px-4 py-4 flex items-start gap-3">
+                    <Globe size={16} className="text-blue-300 mt-0.5 shrink-0" />
+                    <div>
+                      <div className="text-sm text-slate-400">Country / Region</div>
+                      <div className="font-medium">
+                        {userData.country || '-'}{userData.stateRegion ? ` / ${userData.stateRegion}` : ''}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-white/8 bg-black/20 px-4 py-4 flex items-start gap-3">
+                    <MapPin size={16} className="text-blue-300 mt-0.5 shrink-0" />
+                    <div>
+                      <div className="text-sm text-slate-400">Location</div>
+                      <div className="font-medium">{locationText || '-'}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+                        <div className="grid xl:grid-cols-3 gap-4">
               {[
                 { key: 'btc', title: 'BTC Address', value: userData.btc_address || '' },
                 { key: 'eth', title: 'ETH Address', value: userData.eth_address || '' },
