@@ -31,6 +31,7 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import History from './pages/History';
 import MyWallets from './pages/MyWallets';
+import SendReceive from './pages/SendReceive';
 import AppShell from './components/AppShell';
 
 import AdminRoute from './components/AdminRoute';
