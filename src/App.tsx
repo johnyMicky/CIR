@@ -32,6 +32,7 @@ import Dashboard from './pages/Dashboard';
 import History from './pages/History';
 import MyWallets from './pages/MyWallets';
 import SendReceive from './pages/SendReceive';
+import SettingsPage from './pages/SettingsPage';
 import ExchangeSwap from './pages/ExchangeSwap';
 import AppShell from './components/AppShell';
 
@@ -782,6 +783,7 @@ function App() {
         <Route path="/send-receive" element={<SendReceive />} />
         <Route path="/exchange" element={<ExchangeSwap />} />
         <Route path="/history" element={<History />} />
+        <Route path="/settings" element={<SettingsPage />} />
       </Route>
 
       <Route
