@@ -411,21 +411,21 @@ const MyWallets = () => {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.45fr_1fr]">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(340px,0.95fr)]">
         <section className="overflow-hidden rounded-[28px] border border-cyan-300/10 bg-[linear-gradient(135deg,rgba(59,130,246,0.16),rgba(34,211,238,0.10),rgba(139,92,246,0.14))] p-5 shadow-[0_20px_60px_rgba(0,0,0,0.28)] sm:p-6 lg:p-7">
-          <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.35fr)_380px]">
+          <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
             <div className="min-w-0">
               <div className="text-sm font-medium uppercase tracking-[0.18em] text-cyan-200/80">
                 Total Wallet Value
               </div>
 
-              <div className="mt-6 min-w-0">
-                <div className="max-w-full text-[42px] font-semibold leading-none tracking-tight tabular-nums sm:text-[54px] xl:text-[62px]">
+              <div className="mt-6">
+                <div className="max-w-full overflow-hidden text-ellipsis text-[44px] font-semibold leading-[0.95] tracking-tight tabular-nums sm:text-[56px] lg:text-[64px] 2xl:text-[72px]">
                   {showBalance ? formatMoney(totalAssets) : "••••••••"}
                 </div>
               </div>
 
-              <div className="mt-6 text-base text-slate-300">
+              <div className="mt-6 max-w-md text-base leading-8 text-slate-300">
                 Combined value across {walletRows.length} active crypto wallets
               </div>
             </div>
@@ -435,7 +435,7 @@ const MyWallets = () => {
                 <div className="text-xs uppercase tracking-[0.22em] text-slate-400">
                   Available
                 </div>
-                <div className="mt-4 text-[28px] font-semibold leading-none tabular-nums sm:text-[34px]">
+                <div className="mt-4 overflow-hidden text-[26px] font-semibold leading-none tracking-tight tabular-nums sm:text-[30px]">
                   {showBalance ? formatMoney(totalAvailable) : "••••••"}
                 </div>
               </div>
@@ -444,7 +444,7 @@ const MyWallets = () => {
                 <div className="text-xs uppercase tracking-[0.22em] text-slate-400">
                   Locked
                 </div>
-                <div className="mt-4 text-[28px] font-semibold leading-none tabular-nums sm:text-[34px]">
+                <div className="mt-4 overflow-hidden text-[26px] font-semibold leading-none tracking-tight tabular-nums sm:text-[30px]">
                   {showBalance ? formatMoney(totalLocked) : "••••••"}
                 </div>
               </div>
@@ -487,7 +487,7 @@ const MyWallets = () => {
           </div>
           <div className="mt-1 text-lg font-semibold">Manage wallet operations</div>
 
-          <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3 xl:grid-cols-1 2xl:grid-cols-3">
+          <div className="mt-6 grid grid-cols-1 gap-4">
             {[
               {
                 label: "Deposit",
