@@ -23,11 +23,14 @@ import {
   X,
   SendHorizontal,
   ChevronDown,
-  Sparkles,
-  CircleDollarSign,
   QrCode,
   BadgeCheck,
-  AlertCircle
+  AlertCircle,
+  Lock,
+  UserPlus,
+  Layers3,
+  TrendingUp,
+  ArrowRight
 } from "lucide-react";
 import { db } from "../firebase";
 import { useAuth } from "../context/AuthContext";
@@ -131,20 +134,16 @@ const coinUi = {
   }
 } as const;
 
-const baseGlass =
-  "rounded-[30px] border border-white/10 bg-[linear-gradient(180deg,rgba(5,10,22,0.94),rgba(3,8,18,0.98))] shadow-[0_18px_80px_rgba(0,0,0,0.42)] backdrop-blur-xl";
-
-const darkCard =
-  "relative overflow-hidden rounded-[26px] border border-white/10 bg-[linear-gradient(180deg,rgba(7,14,28,0.94),rgba(4,10,20,0.98))] shadow-[0_10px_40px_rgba(0,0,0,0.28)]";
-
 const inputClass =
   "w-full rounded-2xl border border-white/10 bg-[#050b16] px-4 py-3.5 text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-500/10";
-
 const modalBackdrop =
   "fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md";
-
 const modalPanel =
-  "relative w-full max-w-2xl overflow-hidden rounded-[34px] border border-white/10 bg-[linear-gradient(180deg,rgba(4,9,18,0.98),rgba(3,8,16,0.99))] shadow-[0_35px_120px_rgba(0,0,0,0.65)]";
+  "relative w-full max-w-3xl overflow-hidden rounded-[34px] border border-[#20314d] bg-[linear-gradient(180deg,#050c18_0%,#030814_100%)] shadow-[0_35px_120px_rgba(0,0,0,0.65)]";
+const sectionCard =
+  "rounded-[30px] border border-[#1d2b46] bg-[linear-gradient(180deg,#030814_0%,#02060f_100%)] shadow-[0_30px_120px_rgba(0,0,0,0.45)]";
+const subCard =
+  "rounded-[24px] border border-white/12 bg-[linear-gradient(180deg,rgba(9,18,36,0.96),rgba(4,10,20,0.98))] shadow-[0_14px_50px_rgba(0,0,0,0.28)]";
 
 const formatMoney = (value: number) =>
   value.toLocaleString(undefined, {
@@ -366,11 +365,8 @@ const Dashboard = () => {
     const activityRef = ref(db, `activity_logs/${user.id}`);
 
     const unsubUser = onValue(userRef, (snapshot) => {
-      if (snapshot.exists()) {
-        setUserData(snapshot.val());
-      } else {
-        setUserData(null);
-      }
+      if (snapshot.exists()) setUserData(snapshot.val());
+      else setUserData(null);
     });
 
     const unsubActivity = onValue(activityRef, (snapshot) => {
@@ -404,7 +400,6 @@ const Dashboard = () => {
           "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=bitcoin,ethereum,tether"
         );
         const json = await response.json();
-
         if (!active || !Array.isArray(json)) return;
 
         const nextMarket: MarketState = { ...DEFAULT_MARKET };
@@ -536,7 +531,6 @@ const Dashboard = () => {
 
   const handleCopy = async (value: string, key: string) => {
     if (!value) return;
-
     try {
       await navigator.clipboard.writeText(value);
       setCopied(key);
@@ -548,7 +542,6 @@ const Dashboard = () => {
 
   const addActivityLog = async (type: string, details: Record<string, any> = {}) => {
     if (!user?.id) return;
-
     const logRef = push(ref(db, `activity_logs/${user.id}`));
     await set(logRef, {
       type,
@@ -608,10 +601,10 @@ const Dashboard = () => {
         note: ""
       });
       setReceiveOpen(false);
-      showToast("Deposit request sent to admin.");
+      showToast("Pending");
     } catch (error) {
       console.error(error);
-      showToast("Failed to submit deposit request.");
+      showToast("Failed to submit request.");
     } finally {
       setSubmitting(false);
     }
@@ -673,10 +666,10 @@ const Dashboard = () => {
         note: ""
       });
       setWithdrawOpen(false);
-      showToast("Withdrawal request sent to admin.");
+      showToast("Pending");
     } catch (error) {
       console.error(error);
-      showToast("Failed to submit withdrawal request.");
+      showToast("Failed to submit request.");
     } finally {
       setSubmitting(false);
     }
@@ -696,7 +689,6 @@ const Dashboard = () => {
     }
 
     const amount = Number(swapForm.fromAmount || 0);
-
     if (amount > currentSwapBalance) {
       showToast("Not enough available balance.");
       return;
@@ -735,10 +727,10 @@ const Dashboard = () => {
         note: ""
       });
       setSwapOpen(false);
-      showToast("Swap request sent to admin.");
+      showToast("Pending");
     } catch (error) {
       console.error(error);
-      showToast("Failed to submit swap request.");
+      showToast("Failed to submit request.");
     } finally {
       setSubmitting(false);
     }
@@ -749,412 +741,438 @@ const Dashboard = () => {
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#02060d] text-white">
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(8,145,178,0.10),transparent_25%),radial-gradient(circle_at_top_right,rgba(37,99,235,0.12),transparent_24%),radial-gradient(circle_at_bottom,rgba(16,185,129,0.08),transparent_26%)]" />
-        <div className="absolute -left-20 top-0 h-[320px] w-[320px] rounded-full bg-cyan-500/10 blur-[130px]" />
-        <div className="absolute right-0 top-24 h-[280px] w-[280px] rounded-full bg-blue-700/10 blur-[120px]" />
-        <div className="absolute bottom-0 left-[20%] h-[320px] w-[320px] rounded-full bg-indigo-600/10 blur-[130px]" />
-        <div className="absolute inset-0 opacity-[0.035] [background-image:linear-gradient(rgba(255,255,255,0.09)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.09)_1px,transparent_1px)] [background-size:42px_42px]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(29,78,216,0.10),transparent_26%),radial-gradient(circle_at_bottom_right,rgba(6,182,212,0.10),transparent_24%)]" />
+        <div className="absolute inset-0 opacity-[0.04] [background-image:linear-gradient(rgba(255,255,255,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.06)_1px,transparent_1px)] [background-size:34px_34px]" />
+        <div className="absolute -bottom-20 right-10 h-72 w-72 rounded-full bg-blue-600/10 blur-[120px]" />
       </div>
 
       <div className="relative mx-auto max-w-7xl px-4 py-6 md:px-6 md:py-8">
-        <div className="overflow-hidden rounded-[38px] border border-white/10 bg-[linear-gradient(180deg,rgba(2,7,16,0.92),rgba(2,6,14,0.98))] shadow-[0_30px_140px_rgba(0,0,0,0.52)] backdrop-blur-xl">
-          <div className="border-b border-white/10 px-5 py-6 md:px-8">
-            <div className="flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
-              <div className="max-w-4xl">
-                <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-400/10 px-4 py-2 text-[11px] font-extrabold uppercase tracking-[0.24em] text-cyan-300">
+        <div className="space-y-6">
+          <div className="grid gap-8 xl:grid-cols-[1.05fr_0.95fr]">
+            <div className={`relative overflow-hidden p-8 ${sectionCard}`}>
+              <div className="absolute inset-y-0 left-0 w-[60%] bg-[linear-gradient(90deg,rgba(37,99,235,0.10),transparent)]" />
+
+              <div className="relative">
+                <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#294b82] bg-[#0a1630] px-5 py-3 text-[12px] font-bold uppercase tracking-[0.34em] text-[#a8c7ff]">
                   <ShieldCheck size={14} />
-                  Secure Client Dashboard
+                  Private Digital Asset Access
                 </div>
 
-                <h1 className="text-4xl font-black tracking-tight text-white md:text-5xl">
-                  Welcome back, {fullName}
+                <h1 className="max-w-3xl text-[56px] font-black leading-[0.96] tracking-[-0.04em] text-white md:text-[78px]">
+                  Secure Wallet
+                  <span className="mt-2 block bg-[linear-gradient(180deg,#5ea0ff_0%,#2f6df3_100%)] bg-clip-text italic text-transparent">
+                    Control, Built
+                  </span>
+                  <span className="block bg-[linear-gradient(180deg,#5ea0ff_0%,#2f6df3_100%)] bg-clip-text italic text-transparent">
+                    Private.
+                  </span>
                 </h1>
 
-                <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-400 md:text-base">
-                  Premium wallet overview with admin-controlled transactions,
-                  official asset pricing, and a cleaner client-facing activity feed.
+                <p className="mt-8 max-w-2xl text-[17px] leading-8 text-slate-300">
+                  {fullName} has secure access to digital assets through a private,
+                  premium wallet environment built for controlled balance management,
+                  protected routing, and trusted client access.
                 </p>
-              </div>
 
-              <div className="flex flex-wrap gap-3">
-                <Link
-                  to="/"
-                  className="rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-3 text-sm font-medium text-slate-200 transition-all hover:bg-white/[0.08]"
-                >
-                  Back Home
-                </Link>
+                <div className="mt-10 flex flex-wrap gap-4">
+                  <Link
+                    to="/register"
+                    className="inline-flex items-center gap-3 rounded-[22px] bg-[linear-gradient(180deg,#3571f4_0%,#2c63de_100%)] px-7 py-5 text-lg font-bold text-white shadow-[0_14px_40px_rgba(44,99,222,0.38)] transition hover:translate-y-[-1px]"
+                  >
+                    <UserPlus size={20} />
+                    Create Account
+                    <ArrowRight size={20} />
+                  </Link>
 
-                <button
-                  onClick={logout}
-                  className="rounded-2xl bg-[linear-gradient(135deg,#1d4ed8,#0891b2)] px-5 py-3 text-sm font-semibold text-white shadow-[0_10px_30px_rgba(29,78,216,0.28)] transition-all hover:scale-[1.01] hover:shadow-[0_16px_35px_rgba(8,145,178,0.25)]"
-                >
-                  Logout
-                </button>
+                  <button
+                    onClick={logout}
+                    className="inline-flex items-center gap-3 rounded-[22px] border border-white/10 bg-white/[0.04] px-7 py-5 text-lg font-bold text-white transition hover:bg-white/[0.08]"
+                  >
+                    <Lock size={20} />
+                    Logout
+                  </button>
+                </div>
+
+                <div className="mt-12 grid gap-4 md:grid-cols-3">
+                  <div className="rounded-[24px] border border-white/14 bg-[linear-gradient(180deg,rgba(11,18,34,0.95),rgba(6,12,24,0.98))] p-5">
+                    <div className="mb-3 text-[11px] font-bold uppercase tracking-[0.32em] text-white/40">
+                      Secure Access
+                    </div>
+                    <div className="text-[18px] font-bold leading-8 text-white">
+                      Private wallet login environment
+                    </div>
+                  </div>
+
+                  <div className="rounded-[24px] border border-white/14 bg-[linear-gradient(180deg,rgba(11,18,34,0.95),rgba(6,12,24,0.98))] p-5">
+                    <div className="mb-3 text-[11px] font-bold uppercase tracking-[0.32em] text-white/40">
+                      Asset Support
+                    </div>
+                    <div className="text-[18px] font-bold leading-8 text-white">
+                      BTC, ETH and USDT management
+                    </div>
+                  </div>
+
+                  <div className="rounded-[24px] border border-white/14 bg-[linear-gradient(180deg,rgba(11,18,34,0.95),rgba(6,12,24,0.98))] p-5">
+                    <div className="mb-3 text-[11px] font-bold uppercase tracking-[0.32em] text-white/40">
+                      Protected Flow
+                    </div>
+                    <div className="text-[18px] font-bold leading-8 text-white">
+                      Internal routing and control layer
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="space-y-6 px-5 py-6 md:px-8 md:py-8">
-            <div className="grid gap-6 xl:grid-cols-[1.3fr_0.7fr]">
-              <div className={`${baseGlass} p-5 md:p-6`}>
-                <div className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
-                  <div className="relative overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(6,13,26,0.92),rgba(4,10,20,0.98))] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.35)]">
-                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,0.18),transparent_32%),radial-gradient(circle_at_bottom_left,rgba(59,130,246,0.14),transparent_30%)]" />
-                    <div className="relative">
-                      <div className="mb-3 flex items-center justify-between gap-4">
-                        <div>
-                          <div className="text-[11px] font-bold uppercase tracking-[0.24em] text-white/35">
-                            Portfolio Overview
-                          </div>
-                          <div className="mt-2 text-4xl font-black tracking-tight text-white md:text-5xl">
-                            ${formatMoney(balances.usd)}
-                          </div>
-                          <div className="mt-3 text-sm text-slate-400">
-                            Total visible wallet value
-                          </div>
-                        </div>
+            <div className={`relative overflow-hidden p-8 ${sectionCard}`}>
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_center,rgba(6,182,212,0.10),transparent_32%)]" />
 
-                        <div
-                          className={`inline-flex w-fit items-center gap-2 rounded-2xl border px-4 py-2.5 text-sm ${
-                            userData?.online
-                              ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300"
-                              : "border-white/10 bg-white/[0.04] text-slate-300"
-                          }`}
-                        >
-                          {userData?.online ? <Wifi size={16} /> : <WifiOff size={16} />}
-                          <span>{userData?.online ? "Online" : "Offline"}</span>
-                        </div>
+              <div className="relative">
+                <div className="mb-7 flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-4">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-[20px] border border-[#2d5cb0] bg-[#0c1c42] text-[#65a5ff]">
+                      <ShieldCheck size={28} />
+                    </div>
+
+                    <div>
+                      <div className="text-[17px] font-extrabold text-white md:text-[20px]">
+                        Axcel Private Wallet
                       </div>
-
-                      <div className="grid gap-3 sm:grid-cols-3">
-                        <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                          <div className="text-xs uppercase tracking-[0.18em] text-slate-500">
-                            Admin Review
-                          </div>
-                          <div className="mt-2 flex items-center gap-2 text-sm font-medium text-white">
-                            <BadgeCheck size={15} className="text-cyan-300" />
-                            All requests go to admin
-                          </div>
-                        </div>
-
-                        <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                          <div className="text-xs uppercase tracking-[0.18em] text-slate-500">
-                            Asset Prices
-                          </div>
-                          <div className="mt-2 flex items-center gap-2 text-sm font-medium text-white">
-                            <Sparkles size={15} className="text-cyan-300" />
-                            Live market pricing
-                          </div>
-                        </div>
-
-                        <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                          <div className="text-xs uppercase tracking-[0.18em] text-slate-500">
-                            Withdrawals
-                          </div>
-                          <div className="mt-2 flex items-center gap-2 text-sm font-medium text-white">
-                            <AlertCircle size={15} className="text-amber-300" />
-                            Pending admin approval
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="mt-5 grid gap-3 sm:grid-cols-3">
-                        <button
-                          onClick={() => setReceiveOpen(true)}
-                          className="group rounded-[22px] border border-emerald-400/15 bg-[linear-gradient(180deg,rgba(16,185,129,0.16),rgba(16,185,129,0.06))] px-4 py-4 transition-all hover:border-emerald-400/25 hover:bg-emerald-500/12"
-                        >
-                          <div className="flex items-center justify-center gap-2">
-                            <ArrowDownLeft
-                              size={18}
-                              className="text-emerald-300 transition-transform group-hover:-translate-y-[1px]"
-                            />
-                            <span className="font-semibold text-white">Receive</span>
-                          </div>
-                        </button>
-
-                        <button
-                          onClick={() => setWithdrawOpen(true)}
-                          className="group rounded-[22px] border border-rose-400/15 bg-[linear-gradient(180deg,rgba(244,63,94,0.16),rgba(244,63,94,0.06))] px-4 py-4 transition-all hover:border-rose-400/25 hover:bg-rose-500/12"
-                        >
-                          <div className="flex items-center justify-center gap-2">
-                            <ArrowUpRight
-                              size={18}
-                              className="text-rose-300 transition-transform group-hover:-translate-y-[1px]"
-                            />
-                            <span className="font-semibold text-white">Withdraw</span>
-                          </div>
-                        </button>
-
-                        <button
-                          onClick={() => setSwapOpen(true)}
-                          className="group rounded-[22px] border border-cyan-400/15 bg-[linear-gradient(180deg,rgba(6,182,212,0.16),rgba(6,182,212,0.06))] px-4 py-4 transition-all hover:border-cyan-400/25 hover:bg-cyan-500/12"
-                        >
-                          <div className="flex items-center justify-center gap-2">
-                            <RefreshCw
-                              size={18}
-                              className="text-cyan-300 transition-transform group-hover:rotate-45"
-                            />
-                            <span className="font-semibold text-white">Swap</span>
-                          </div>
-                        </button>
+                      <div className="mt-1 text-lg text-slate-400">
+                        Premium secure asset environment
                       </div>
                     </div>
                   </div>
 
-                  <div className="grid gap-3">
-                    {(["BTC", "ETH", "USDT"] as CoinKey[]).map((coin) => {
-                      const balanceValue =
-                        coin === "BTC"
-                          ? balances.btc
-                          : coin === "ETH"
-                          ? balances.eth
-                          : balances.usdt;
+                  <div className="text-right">
+                    <div className="text-[11px] font-bold uppercase tracking-[0.28em] text-white/35">
+                      Session Status
+                    </div>
+                    <div className="mt-2 text-[18px] font-bold text-emerald-400">
+                      {userData?.online ? "Protected" : "Idle"}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className={`${subCard} border-white/15 p-6`}>
+                    <div className="mb-3 flex items-center gap-2 text-[12px] font-bold uppercase tracking-[0.24em] text-white/35">
+                      <Landmark size={14} className="text-[#66a7ff]" />
+                      Wallet Value
+                    </div>
+                    <div className="text-[36px] font-black tracking-tight text-white">
+                      ${formatMoney(balances.usd)}
+                    </div>
+                  </div>
+
+                  <div className={`${subCard} border-white/15 p-6`}>
+                    <div className="mb-3 flex items-center gap-2 text-[12px] font-bold uppercase tracking-[0.24em] text-white/35">
+                      <TrendingUp size={14} className="text-emerald-400" />
+                      Live Session
+                    </div>
+                    <div className="text-[36px] font-black tracking-tight text-emerald-400">
+                      {userData?.online ? "Online" : "Offline"}
+                    </div>
+                  </div>
+                </div>
+
+                <div className={`${subCard} mt-4 border-white/15 p-6`}>
+                  <div className="mb-4 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 text-[14px] font-bold text-white">
+                      <Layers3 size={16} className="text-[#66a7ff]" />
+                      BTC Storage Node
+                    </div>
+                    <div className="text-[17px] font-bold text-emerald-400">
+                      ${formatMoney(balances.btc * (market.BTC.price || 0))}
+                    </div>
+                  </div>
+
+                  <div className="text-[28px] font-black tracking-tight text-white md:text-[42px]">
+                    {formatCoinAmount("BTC", balances.btc)}
+                  </div>
+
+                  <div className="mt-4 h-3 overflow-hidden rounded-full bg-white/10">
+                    <div
+                      className="h-full rounded-full bg-[linear-gradient(90deg,#2e6bf2,#34d6ff)]"
+                      style={{
+                        width: `${Math.min(
+                          100,
+                          balances.usd > 0
+                            ? ((balances.btc * (market.BTC.price || 0)) / balances.usd) * 100
+                            : 0
+                        )}%`
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-4 grid gap-4 md:grid-cols-2">
+                  <div className={`${subCard} border-white/15 p-6`}>
+                    <div className="mb-3 text-[12px] font-bold uppercase tracking-[0.28em] text-white/35">
+                      Access Tier
+                    </div>
+                    <div className="text-[17px] font-bold text-white">
+                      Private Operator
+                    </div>
+                  </div>
+
+                  <div className={`${subCard} border-white/15 p-6`}>
+                    <div className="mb-3 text-[12px] font-bold uppercase tracking-[0.28em] text-white/35">
+                      Routing
+                    </div>
+                    <div className="text-[17px] font-bold text-white">
+                      Integrity Verified
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                  <button
+                    onClick={() => setReceiveOpen(true)}
+                    className="group rounded-[20px] border border-[#31589f] bg-[linear-gradient(180deg,#0d1f45_0%,#09152e_100%)] px-4 py-4 transition hover:border-[#4b7ddd]"
+                  >
+                    <div className="flex items-center justify-center gap-2">
+                      <ArrowDownLeft size={18} className="text-emerald-300" />
+                      <span className="font-semibold text-white">Receive</span>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => setWithdrawOpen(true)}
+                    className="group rounded-[20px] border border-[#31589f] bg-[linear-gradient(180deg,#0d1f45_0%,#09152e_100%)] px-4 py-4 transition hover:border-[#4b7ddd]"
+                  >
+                    <div className="flex items-center justify-center gap-2">
+                      <ArrowUpRight size={18} className="text-rose-300" />
+                      <span className="font-semibold text-white">Withdraw</span>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => setSwapOpen(true)}
+                    className="group rounded-[20px] border border-[#31589f] bg-[linear-gradient(180deg,#0d1f45_0%,#09152e_100%)] px-4 py-4 transition hover:border-[#4b7ddd]"
+                  >
+                    <div className="flex items-center justify-center gap-2">
+                      <RefreshCw size={18} className="text-cyan-300" />
+                      <span className="font-semibold text-white">Swap</span>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-6 xl:grid-cols-[0.72fr_1.28fr]">
+            <div className={`${sectionCard} p-6`}>
+              <div className="mb-5 flex items-center gap-4">
+                <div className="flex h-16 w-16 items-center justify-center rounded-[22px] border border-cyan-400/20 bg-cyan-500/10 text-xl font-black text-cyan-300">
+                  {fullName?.slice(0, 1)?.toUpperCase() || "U"}
+                </div>
+
+                <div>
+                  <div className="text-[11px] font-bold uppercase tracking-[0.24em] text-white/35">
+                    Client Profile
+                  </div>
+                  <div className="mt-1 text-2xl font-black tracking-tight text-white">
+                    {fullName}
+                  </div>
+                  <div className="mt-1 text-sm text-slate-400">
+                    Secure account summary
+                  </div>
+                </div>
+              </div>
+
+              <div className="mb-4 flex flex-wrap gap-2">
+                <div className="rounded-full border border-cyan-400/15 bg-cyan-500/10 px-3 py-1.5 text-xs text-cyan-300">
+                  Verified Client
+                </div>
+                <div
+                  className={`rounded-full border px-3 py-1.5 text-xs ${
+                    userData?.online
+                      ? "border-emerald-400/15 bg-emerald-500/10 text-emerald-300"
+                      : "border-white/10 bg-white/[0.04] text-slate-300"
+                  }`}
+                >
+                  {userData?.online ? "Protected Session" : "Offline"}
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                {[
+                  {
+                    icon: <Mail size={16} className="text-cyan-300" />,
+                    label: "Email",
+                    value: userData?.email || user?.email || "-"
+                  },
+                  {
+                    icon: <Phone size={16} className="text-cyan-300" />,
+                    label: "Phone",
+                    value: userData?.phone || "-"
+                  },
+                  {
+                    icon: <Globe size={16} className="text-cyan-300" />,
+                    label: "Country / Region",
+                    value: `${userData?.country || "-"}${
+                      userData?.stateRegion ? ` / ${userData.stateRegion}` : ""
+                    }`
+                  },
+                  {
+                    icon: <MapPin size={16} className="text-cyan-300" />,
+                    label: "Location",
+                    value: locationText || "-"
+                  },
+                  {
+                    icon: <Clock3 size={16} className="text-cyan-300" />,
+                    label: "Last Seen",
+                    value: formatLastSeen(userData?.last_seen, userData?.lastSeen)
+                  }
+                ].map((item, index) => (
+                  <div
+                    key={index}
+                    className="rounded-[22px] border border-white/10 bg-[linear-gradient(180deg,rgba(9,18,36,0.96),rgba(4,10,20,0.98))] px-4 py-4"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-cyan-400/10 bg-cyan-500/10">
+                        {item.icon}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-sm text-slate-400">{item.label}</div>
+                        <div className="mt-1 break-all font-medium text-white">
+                          {item.value}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <div className="grid gap-4 xl:grid-cols-3">
+                {([
+                  {
+                    key: "btc",
+                    coin: "BTC" as CoinKey,
+                    title: "BTC Address",
+                    value: userData?.btc_address || ""
+                  },
+                  {
+                    key: "eth",
+                    coin: "ETH" as CoinKey,
+                    title: "ETH Address",
+                    value: userData?.eth_address || ""
+                  },
+                  {
+                    key: "usdt",
+                    coin: "USDT" as CoinKey,
+                    title: "USDT Address",
+                    value: userData?.usdt_address || ""
+                  }
+                ] as const).map((item) => (
+                  <div key={item.key} className={`${sectionCard} p-5`}>
+                    <div className="mb-4 flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <CoinBadge coin={item.coin} market={market} size={40} />
+                        <div>
+                          <div className="text-sm font-semibold text-white">{item.title}</div>
+                          <div className="text-[11px] uppercase tracking-[0.18em] text-white/35">
+                            Deposit route
+                          </div>
+                        </div>
+                      </div>
+
+                      {item.value && (
+                        <button
+                          onClick={() => handleCopy(item.value, item.key)}
+                          className="inline-flex shrink-0 items-center gap-2 rounded-full border border-cyan-400/10 bg-cyan-500/8 px-3 py-1.5 text-xs font-medium text-cyan-300 transition-colors hover:text-cyan-200"
+                        >
+                          {copied === item.key ? (
+                            <CheckCircle2 size={14} />
+                          ) : (
+                            <Copy size={14} />
+                          )}
+                          <span>{copied === item.key ? "Copied" : "Copy"}</span>
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="break-all rounded-2xl border border-white/8 bg-[#040b15]/90 p-4 text-sm leading-relaxed text-slate-300">
+                      {item.value || `No ${item.title} assigned yet`}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className={`${sectionCard} p-6`}>
+                <div className="mb-6 flex items-center gap-4">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-[20px] border border-violet-400/20 bg-violet-500/10 text-violet-300">
+                    <Activity size={20} />
+                  </div>
+                  <div>
+                    <div className="mb-1 text-[11px] font-bold uppercase tracking-[0.22em] text-white/35">
+                      Activity
+                    </div>
+                    <div className="text-2xl font-black tracking-tight text-white">
+                      Recent Client Log
+                    </div>
+                  </div>
+                </div>
+
+                {clientLogItems.length === 0 ? (
+                  <div className="rounded-[24px] border border-white/8 bg-[#040b15]/90 p-6 text-slate-400">
+                    No credited deposits have been logged for this account yet.
+                  </div>
+                ) : (
+                  <div className="grid gap-4 md:grid-cols-2">
+                    {clientLogItems.map((item) => {
+                      const { amount, coin } = getCreditedAmountFromItem(item);
+                      const reason = getDepositReason(item);
 
                       return (
-                        <div key={coin} className={`${darkCard} p-4`}>
-                          <div
-                            className={`pointer-events-none absolute inset-x-0 top-0 h-20 opacity-80 ${coinUi[coin].glowClass}`}
-                          />
-                          <div className="relative flex items-start justify-between gap-4">
-                            <div className="flex items-center gap-3">
-                              <CoinBadge coin={coin} market={market} size={42} />
-                              <div>
-                                <div className="text-sm font-semibold text-white">
-                                  {coinUi[coin].label}
-                                </div>
-                                <div className="text-xs uppercase tracking-[0.18em] text-slate-500">
-                                  {coin}
-                                </div>
+                        <div
+                          key={item.id}
+                          className="rounded-[28px] border border-white/12 bg-[linear-gradient(180deg,rgba(3,11,24,0.96),rgba(2,8,18,0.98))] p-5 shadow-[0_10px_30px_rgba(0,0,0,0.22)]"
+                        >
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="max-w-[70%]">
+                              <div className="text-[11px] font-bold uppercase tracking-[0.22em] text-white/35">
+                                Deposit Reason
+                              </div>
+                              <div className="mt-2 text-2xl font-bold leading-tight text-white">
+                                {reason}
                               </div>
                             </div>
 
-                            <div
-                              className={`rounded-full border px-2.5 py-1 text-[11px] ${coinUi[coin].chip}`}
-                            >
-                              ${formatMoney(Number(market[coin].price || 0))}
+                            <div className="shrink-0 text-right">
+                              <div className="text-[11px] uppercase tracking-[0.18em] text-white/35">
+                                Credited
+                              </div>
+                              <div className="mt-2 text-xl font-black text-cyan-300">
+                                {amount || "-"} {coin || ""}
+                              </div>
                             </div>
                           </div>
 
-                          <div className="mt-4 text-2xl font-black tracking-tight text-white">
-                            {formatCoinAmount(coin, balanceValue)} {coin}
+                          <div className="mt-5 flex items-center justify-between gap-3">
+                            <div className="rounded-full border border-cyan-400/12 bg-cyan-500/8 px-3 py-1.5 text-xs text-cyan-200">
+                              Deposit credit
+                            </div>
+                            <div className="text-xs text-slate-500">
+                              {formatActivityTime(item.created_at)}
+                            </div>
                           </div>
                         </div>
                       );
                     })}
                   </div>
-                </div>
+                )}
               </div>
-
-              <div className={`${baseGlass} p-5 md:p-6`}>
-                <div className="mb-5 flex items-center gap-4">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-[22px] border border-cyan-400/20 bg-cyan-500/10 text-xl font-black text-cyan-300">
-                    {fullName?.slice(0, 1)?.toUpperCase() || "U"}
-                  </div>
-
-                  <div>
-                    <div className="text-[11px] font-bold uppercase tracking-[0.24em] text-white/35">
-                      Client Profile
-                    </div>
-                    <div className="mt-1 text-2xl font-black tracking-tight text-white">
-                      {fullName}
-                    </div>
-                    <div className="mt-1 text-sm text-slate-400">
-                      Secure account summary
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mb-4 flex flex-wrap gap-2">
-                  <div className="rounded-full border border-cyan-400/15 bg-cyan-500/10 px-3 py-1.5 text-xs text-cyan-300">
-                    Verified Client
-                  </div>
-                  <div
-                    className={`rounded-full border px-3 py-1.5 text-xs ${
-                      userData?.online
-                        ? "border-emerald-400/15 bg-emerald-500/10 text-emerald-300"
-                        : "border-white/10 bg-white/[0.04] text-slate-300"
-                    }`}
-                  >
-                    {userData?.online ? "Live session" : "Offline"}
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  {[
-                    {
-                      icon: <Mail size={16} className="text-cyan-300" />,
-                      label: "Email",
-                      value: userData?.email || user?.email || "-"
-                    },
-                    {
-                      icon: <Phone size={16} className="text-cyan-300" />,
-                      label: "Phone",
-                      value: userData?.phone || "-"
-                    },
-                    {
-                      icon: <Globe size={16} className="text-cyan-300" />,
-                      label: "Country / Region",
-                      value: `${userData?.country || "-"}${
-                        userData?.stateRegion ? ` / ${userData.stateRegion}` : ""
-                      }`
-                    },
-                    {
-                      icon: <MapPin size={16} className="text-cyan-300" />,
-                      label: "Location",
-                      value: locationText || "-"
-                    },
-                    {
-                      icon: <Clock3 size={16} className="text-cyan-300" />,
-                      label: "Last Seen",
-                      value: formatLastSeen(userData?.last_seen, userData?.lastSeen)
-                    }
-                  ].map((item, index) => (
-                    <div
-                      key={index}
-                      className="rounded-[22px] border border-white/8 bg-[#040b15]/90 px-4 py-4 transition-all hover:border-white/12 hover:bg-[#07111d]"
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-cyan-400/10 bg-cyan-500/10">
-                          {item.icon}
-                        </div>
-                        <div className="min-w-0">
-                          <div className="text-sm text-slate-400">{item.label}</div>
-                          <div className="mt-1 break-all font-medium text-white">
-                            {item.value}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="grid gap-4 xl:grid-cols-3">
-              {([
-                {
-                  key: "btc",
-                  coin: "BTC" as CoinKey,
-                  title: "BTC Address",
-                  value: userData?.btc_address || ""
-                },
-                {
-                  key: "eth",
-                  coin: "ETH" as CoinKey,
-                  title: "ETH Address",
-                  value: userData?.eth_address || ""
-                },
-                {
-                  key: "usdt",
-                  coin: "USDT" as CoinKey,
-                  title: "USDT Address",
-                  value: userData?.usdt_address || ""
-                }
-              ] as const).map((item) => (
-                <div key={item.key} className={`${darkCard} p-5`}>
-                  <div className="mb-4 flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <CoinBadge coin={item.coin} market={market} size={40} />
-                      <div>
-                        <div className="text-sm font-semibold text-white">{item.title}</div>
-                        <div className="text-[11px] uppercase tracking-[0.18em] text-white/35">
-                          Deposit route
-                        </div>
-                      </div>
-                    </div>
-
-                    {item.value && (
-                      <button
-                        onClick={() => handleCopy(item.value, item.key)}
-                        className="inline-flex shrink-0 items-center gap-2 rounded-full border border-cyan-400/10 bg-cyan-500/8 px-3 py-1.5 text-xs font-medium text-cyan-300 transition-colors hover:text-cyan-200"
-                      >
-                        {copied === item.key ? (
-                          <CheckCircle2 size={14} />
-                        ) : (
-                          <Copy size={14} />
-                        )}
-                        <span>{copied === item.key ? "Copied" : "Copy"}</span>
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="break-all rounded-2xl border border-white/8 bg-[#040b15]/90 p-4 text-sm leading-relaxed text-slate-300">
-                    {item.value || `No ${item.title} assigned yet`}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className={`${baseGlass} p-5 md:p-6`}>
-              <div className="mb-6 flex items-center gap-4">
-                <div className="flex h-14 w-14 items-center justify-center rounded-[20px] border border-violet-400/20 bg-violet-500/10 text-violet-300">
-                  <Activity size={20} />
-                </div>
-                <div>
-                  <div className="mb-1 text-[11px] font-bold uppercase tracking-[0.22em] text-white/35">
-                    Activity
-                  </div>
-                  <div className="text-2xl font-black tracking-tight text-white">
-                    Recent Client Log
-                  </div>
-                </div>
-              </div>
-
-              {clientLogItems.length === 0 ? (
-                <div className="rounded-[24px] border border-white/8 bg-[#040b15]/90 p-6 text-slate-400">
-                  No credited deposits have been logged for this account yet.
-                </div>
-              ) : (
-                <div className="grid gap-4 md:grid-cols-2">
-                  {clientLogItems.map((item) => {
-                    const { amount, coin } = getCreditedAmountFromItem(item);
-                    const reason = getDepositReason(item);
-
-                    return (
-                      <div
-                        key={item.id}
-                        className="rounded-[28px] border border-white/12 bg-[linear-gradient(180deg,rgba(3,11,24,0.96),rgba(2,8,18,0.98))] p-5 shadow-[0_10px_30px_rgba(0,0,0,0.22)]"
-                      >
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="max-w-[70%]">
-                            <div className="text-[11px] font-bold uppercase tracking-[0.22em] text-white/35">
-                              Deposit Reason
-                            </div>
-                            <div className="mt-2 text-2xl font-bold leading-tight text-white">
-                              {reason}
-                            </div>
-                          </div>
-
-                          <div className="shrink-0 text-right">
-                            <div className="text-[11px] uppercase tracking-[0.18em] text-white/35">
-                              Credited
-                            </div>
-                            <div className="mt-2 text-xl font-black text-cyan-300">
-                              {amount || "-"} {coin || ""}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="mt-5 flex items-center justify-between gap-3">
-                          <div className="rounded-full border border-cyan-400/12 bg-cyan-500/8 px-3 py-1.5 text-xs text-cyan-200">
-                            Deposit credit
-                          </div>
-                          <div className="text-xs text-slate-500">
-                            {formatActivityTime(item.created_at)}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
             </div>
           </div>
         </div>
       </div>
 
       {toast && (
-        <div className="fixed bottom-6 right-6 z-[60] rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-emerald-300 shadow-[0_14px_40px_rgba(0,0,0,0.35)] backdrop-blur-xl">
+        <div className="fixed bottom-6 right-6 z-[60] rounded-2xl border border-cyan-400/20 bg-[#081526]/95 px-4 py-3 text-cyan-300 shadow-[0_14px_40px_rgba(0,0,0,0.35)] backdrop-blur-xl">
           {toast}
         </div>
       )}
@@ -1167,11 +1185,8 @@ const Dashboard = () => {
               <div className="flex items-center justify-between border-b border-white/8 px-6 py-5">
                 <div>
                   <div className="text-xl font-black">Receive Crypto</div>
-                  <div className="mt-1 text-sm text-slate-400">
-                    Deposit details and admin notification
-                  </div>
+                  <div className="mt-1 text-sm text-slate-400">Status: Pending after submit</div>
                 </div>
-
                 <button
                   onClick={() => setReceiveOpen(false)}
                   className="text-slate-400 transition-colors hover:text-white"
@@ -1186,7 +1201,6 @@ const Dashboard = () => {
                     <div className="mb-3 text-[11px] font-bold uppercase tracking-[0.22em] text-white/35">
                       Select Asset
                     </div>
-
                     <div className="grid grid-cols-3 gap-3">
                       {(["BTC", "ETH", "USDT"] as CoinKey[]).map((coin) => (
                         <button
@@ -1260,15 +1274,12 @@ const Dashboard = () => {
                     </div>
 
                     <div className="mt-4 text-center text-xs leading-6 text-slate-500">
-                      Send only {receiveCoin} to this address. Deposit requests are
-                      submitted to admin for confirmation.
+                      Send only {receiveCoin} to this address.
                     </div>
                   </div>
 
                   <div className="rounded-[26px] border border-white/10 bg-[#040b15]/90 p-5">
-                    <div className="mb-4 text-sm font-semibold text-white">
-                      Notify admin about deposit
-                    </div>
+                    <div className="mb-4 text-sm font-semibold text-white">Deposit Details</div>
 
                     <div className="space-y-3">
                       <input
@@ -1307,7 +1318,7 @@ const Dashboard = () => {
                           }))
                         }
                         className={inputClass}
-                        placeholder="Deposit reason / note for admin (optional)"
+                        placeholder="Deposit reason (optional)"
                       />
 
                       <button
@@ -1315,7 +1326,7 @@ const Dashboard = () => {
                         disabled={submitting}
                         className="w-full rounded-2xl bg-[linear-gradient(135deg,#0891b2,#2563eb)] px-5 py-3.5 font-semibold text-white transition-all hover:opacity-95 disabled:opacity-50"
                       >
-                        {submitting ? "Submitting..." : "Notify Admin"}
+                        {submitting ? "Submitting..." : "Submit"}
                       </button>
                     </div>
                   </div>
@@ -1334,11 +1345,8 @@ const Dashboard = () => {
               <div className="flex items-center justify-between border-b border-white/8 px-6 py-5">
                 <div>
                   <div className="text-xl font-black">Withdraw Request</div>
-                  <div className="mt-1 text-sm text-slate-400">
-                    Requests are sent to admin for approval or rejection
-                  </div>
+                  <div className="mt-1 text-sm text-slate-400">Status: Pending after submit</div>
                 </div>
-
                 <button
                   onClick={() => setWithdrawOpen(false)}
                   className="text-slate-400 transition-colors hover:text-white"
@@ -1477,8 +1485,7 @@ const Dashboard = () => {
 
                       <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
                         <span>
-                          Available:{" "}
-                          {formatCoinAmount(withdrawForm.coin, currentWithdrawBalance)}{" "}
+                          Available: {formatCoinAmount(withdrawForm.coin, currentWithdrawBalance)}{" "}
                           {withdrawForm.coin}
                         </span>
                         <span>
@@ -1496,7 +1503,7 @@ const Dashboard = () => {
                         }))
                       }
                       className={inputClass}
-                      placeholder="Note for admin (optional)"
+                      placeholder="Note (optional)"
                     />
                   </div>
                 </div>
@@ -1504,7 +1511,7 @@ const Dashboard = () => {
                 <div className="space-y-4">
                   <div className="rounded-[26px] border border-white/10 bg-[#040b15]/90 p-5">
                     <div className="mb-4 flex items-center gap-2 text-white">
-                      <CircleDollarSign size={17} className="text-cyan-300" />
+                      <Landmark size={17} className="text-cyan-300" />
                       <span className="font-semibold">Withdrawal Summary</span>
                     </div>
 
@@ -1517,8 +1524,10 @@ const Dashboard = () => {
                       </div>
 
                       <div className="flex items-center justify-between text-sm text-slate-400">
-                        <span>Processing Time</span>
-                        <span className="text-white">Admin review required</span>
+                        <span>Status</span>
+                        <span className="rounded-full border border-amber-400/20 bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-300">
+                          Pending
+                        </span>
                       </div>
 
                       <div className="flex items-center justify-between text-sm text-slate-400">
@@ -1530,35 +1539,12 @@ const Dashboard = () => {
 
                       <div className="border-t border-white/8 pt-3">
                         <div className="flex items-center justify-between">
-                          <span className="text-sm text-slate-400">
-                            Estimated Receive
-                          </span>
+                          <span className="text-sm text-slate-400">Estimated Receive</span>
                           <span className="text-2xl font-black text-cyan-300">
-                            {formatCoinAmount(
-                              withdrawForm.coin,
-                              withdrawReceiveAmount
-                            )}{" "}
+                            {formatCoinAmount(withdrawForm.coin, withdrawReceiveAmount)}{" "}
                             {withdrawForm.coin}
                           </span>
                         </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="rounded-[26px] border border-white/10 bg-[#040b15]/90 p-5">
-                    <div className="mb-4 text-sm font-semibold text-white">
-                      Admin Control
-                    </div>
-
-                    <div className="space-y-3 text-sm text-slate-400">
-                      <div className="rounded-2xl border border-white/8 bg-black/20 p-4">
-                        Every withdrawal request is saved as{" "}
-                        <span className="text-white">pending</span>.
-                      </div>
-                      <div className="rounded-2xl border border-white/8 bg-black/20 p-4">
-                        Admin can <span className="text-emerald-300">approve</span> or{" "}
-                        <span className="text-rose-300">reject</span> it from the
-                        admin side.
                       </div>
                     </div>
 
@@ -1567,8 +1553,12 @@ const Dashboard = () => {
                       disabled={submitting}
                       className="mt-5 w-full rounded-2xl bg-[linear-gradient(135deg,#dc2626,#f43f5e)] px-5 py-3.5 font-semibold text-white transition-all hover:opacity-95 disabled:opacity-50"
                     >
-                      {submitting ? "Submitting..." : "Submit Withdrawal Request"}
+                      {submitting ? "Submitting..." : "Submit"}
                     </button>
+                  </div>
+
+                  <div className="rounded-[26px] border border-white/10 bg-[#040b15]/90 p-5 text-sm text-slate-400">
+                    Submitted withdrawal requests remain pending until reviewed.
                   </div>
                 </div>
               </div>
@@ -1585,11 +1575,8 @@ const Dashboard = () => {
               <div className="flex items-center justify-between border-b border-white/8 px-6 py-5">
                 <div>
                   <div className="text-xl font-black">Swap Request</div>
-                  <div className="mt-1 text-sm text-slate-400">
-                    Internal quote preview, admin-approved execution
-                  </div>
+                  <div className="mt-1 text-sm text-slate-400">Status: Pending after submit</div>
                 </div>
-
                 <button
                   onClick={() => setSwapOpen(false)}
                   className="text-slate-400 transition-colors hover:text-white"
@@ -1650,8 +1637,7 @@ const Dashboard = () => {
                         step="any"
                       />
                       <div className="mt-2 text-xs text-slate-500">
-                        Available:{" "}
-                        {formatCoinAmount(swapForm.fromCoin, currentSwapBalance)}{" "}
+                        Available: {formatCoinAmount(swapForm.fromCoin, currentSwapBalance)}{" "}
                         {swapForm.fromCoin}
                       </div>
                     </div>
@@ -1680,7 +1666,6 @@ const Dashboard = () => {
                     <div className="grid grid-cols-3 gap-3">
                       {(["BTC", "ETH", "USDT"] as CoinKey[]).map((coin) => {
                         const disabled = swapForm.fromCoin === coin;
-
                         return (
                           <button
                             key={coin}
@@ -1713,7 +1698,7 @@ const Dashboard = () => {
                           }))
                         }
                         className={inputClass}
-                        placeholder="Note for admin (optional)"
+                        placeholder="Note (optional)"
                       />
                     </div>
                   </div>
@@ -1721,18 +1706,14 @@ const Dashboard = () => {
 
                 <div className="space-y-4">
                   <div className="rounded-[26px] border border-white/10 bg-[#040b15]/90 p-5">
-                    <div className="mb-4 text-sm font-semibold text-white">
-                      Swap Details
-                    </div>
+                    <div className="mb-4 text-sm font-semibold text-white">Swap Details</div>
 
                     <div className="space-y-3">
                       <div className="flex items-center justify-between text-sm text-slate-400">
                         <span>Swap Rate</span>
                         <span className="text-white">
                           1 {swapForm.fromCoin} ={" "}
-                          {swapRate
-                            ? formatCoinAmount(swapForm.toCoin, swapRate)
-                            : "0.00"}{" "}
+                          {swapRate ? formatCoinAmount(swapForm.toCoin, swapRate) : "0.00"}{" "}
                           {swapForm.toCoin}
                         </span>
                       </div>
@@ -1742,31 +1723,20 @@ const Dashboard = () => {
                         <span className="text-white">0.2%</span>
                       </div>
 
+                      <div className="flex items-center justify-between text-sm text-slate-400">
+                        <span>Status</span>
+                        <span className="rounded-full border border-amber-400/20 bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-300">
+                          Pending
+                        </span>
+                      </div>
+
                       <div className="border-t border-white/8 pt-3">
                         <div className="flex items-center justify-between">
-                          <span className="text-sm text-slate-400">
-                            Estimated Receive
-                          </span>
+                          <span className="text-sm text-slate-400">Estimated Receive</span>
                           <span className="text-2xl font-black text-cyan-300">
-                            {formatCoinAmount(swapForm.toCoin, swapPreview)}{" "}
-                            {swapForm.toCoin}
+                            {formatCoinAmount(swapForm.toCoin, swapPreview)} {swapForm.toCoin}
                           </span>
                         </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="rounded-[26px] border border-white/10 bg-[#040b15]/90 p-5">
-                    <div className="mb-4 text-sm font-semibold text-white">
-                      Execution Note
-                    </div>
-
-                    <div className="space-y-3 text-sm text-slate-400">
-                      <div className="rounded-2xl border border-white/8 bg-black/20 p-4">
-                        This is a quote preview based on current market pricing.
-                      </div>
-                      <div className="rounded-2xl border border-white/8 bg-black/20 p-4">
-                        Final swap execution still requires admin confirmation.
                       </div>
                     </div>
 
@@ -1775,8 +1745,12 @@ const Dashboard = () => {
                       disabled={submitting}
                       className="mt-5 w-full rounded-2xl bg-[linear-gradient(135deg,#f59e0b,#facc15)] px-5 py-3.5 font-semibold text-black transition-all hover:opacity-95 disabled:opacity-50"
                     >
-                      {submitting ? "Submitting..." : "Submit Swap Request"}
+                      {submitting ? "Submitting..." : "Submit"}
                     </button>
+                  </div>
+
+                  <div className="rounded-[26px] border border-white/10 bg-[#040b15]/90 p-5 text-sm text-slate-400">
+                    Submitted swap requests remain pending until reviewed.
                   </div>
                 </div>
               </div>
