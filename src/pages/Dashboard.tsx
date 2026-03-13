@@ -2,26 +2,27 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { ref, onValue, push, set } from 'firebase/database';
 import { Link } from 'react-router-dom';
 import {
-  CreditCard,
-  ArrowUpRight,
-  ArrowDownLeft,
-  RefreshCw,
-  MessageCircle,
-  X,
-  Copy,
-  Wallet,
   ShieldCheck,
   Bitcoin,
   Coins,
+  Wallet,
   Landmark,
-  Wifi,
-  WifiOff,
-  Clock3,
   Mail,
   Phone,
   Globe,
-  MapPin
-} from 'lucide-react';
+  MapPin,
+  Wifi,
+  WifiOff,
+  Clock3,
+  Copy,
+  CheckCircle2,
+  Activity,
+  ArrowDownLeft,
+  ArrowUpRight,
+  RefreshCw,
+  X,
+  SendHorizontal
+} from "lucide-react";
 import { QRCodeSVG } from 'qrcode.react';
 
 import { db } from '../firebase';
