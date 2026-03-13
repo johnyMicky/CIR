@@ -43,20 +43,22 @@ type ShellContext = {
 };
 
 type UserWalletData = {
-  balances?: Record<string, number | string>;
-  lockedBalances?: Record<string, number | string>;
-  walletAddresses?: Record<string, string>;
+  wallets?: Record<string, number | string>;
+  btc_balance?: number | string;
+  eth_balance?: number | string;
+  usdt_balance?: number | string;
+  btc_address?: string;
+  eth_address?: string;
+  usdt_address?: string;
 };
 
 const ASSET_META = [
   { id: "bitcoin", symbol: "BTC", name: "Bitcoin" },
   { id: "ethereum", symbol: "ETH", name: "Ethereum" },
   { id: "tether", symbol: "USDT", name: "Tether" },
-  { id: "solana", symbol: "SOL", name: "Solana" },
-  { id: "binancecoin", symbol: "BNB", name: "BNB" },
 ];
 
-const COLORS = ["#3B82F6", "#22D3EE", "#8B5CF6", "#10B981", "#F59E0B"];
+const COLORS = ["#F7931A", "#627EEA", "#26A17B"];
 
 const toNumber = (value: unknown) => {
   const num = Number(value);
@@ -75,25 +77,14 @@ const MyWallets = () => {
   const [amount, setAmount] = useState("");
   const [address, setAddress] = useState("");
   const [recipient, setRecipient] = useState("");
-  const [walletSource, setWalletSource] = useState<UserWalletData>({
-    balances: {},
-    lockedBalances: {},
-    walletAddresses: {},
-  });
+  const [walletSource, setWalletSource] = useState<UserWalletData>({});
 
   useEffect(() => {
     const fetchMarket = async () => {
       try {
         setLoadingMarket(true);
 
-        const ids = [
-          "bitcoin",
-          "ethereum",
-          "tether",
-          "solana",
-          "binancecoin",
-          "ripple",
-        ].join(",");
+        const ids = ["bitcoin", "ethereum", "tether"].join(",");
 
         const res = await fetch(
           `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${ids}&order=market_cap_desc&per_page=10&page=1&sparkline=false&price_change_percentage=24h`
@@ -118,11 +109,7 @@ const MyWallets = () => {
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
       if (!firebaseUser) {
-        setWalletSource({
-          balances: {},
-          lockedBalances: {},
-          walletAddresses: {},
-        });
+        setWalletSource({});
         setLoadingWallets(false);
         return;
       }
@@ -134,22 +121,12 @@ const MyWallets = () => {
         userRef,
         (snapshot) => {
           const data = (snapshot.val() || {}) as UserWalletData;
-
-          setWalletSource({
-            balances: data.balances || {},
-            lockedBalances: data.lockedBalances || {},
-            walletAddresses: data.walletAddresses || {},
-          });
-
+          setWalletSource(data || {});
           setLoadingWallets(false);
         },
         (error) => {
           console.error("Wallet data fetch error:", error);
-          setWalletSource({
-            balances: {},
-            lockedBalances: {},
-            walletAddresses: {},
-          });
+          setWalletSource({});
           setLoadingWallets(false);
         }
       );
@@ -174,18 +151,36 @@ const MyWallets = () => {
   }, [market]);
 
   const portfolio: PortfolioAsset[] = useMemo(() => {
-    const balances = walletSource.balances || {};
-    const lockedBalances = walletSource.lockedBalances || {};
-    const walletAddresses = walletSource.walletAddresses || {};
+    const wallets = walletSource.wallets || {};
 
-    return ASSET_META.map((asset) => ({
-      id: asset.id,
-      symbol: asset.symbol,
-      name: asset.name,
-      amount: toNumber(balances[asset.symbol]),
-      locked: toNumber(lockedBalances[asset.symbol]),
-      walletAddress: walletAddresses[asset.symbol] || "",
-    }));
+    return ASSET_META.map((asset) => {
+      let amount = 0;
+      let walletAddress = "";
+
+      if (asset.symbol === "BTC") {
+        amount = toNumber(wallets.BTC ?? walletSource.btc_balance);
+        walletAddress = walletSource.btc_address || "";
+      }
+
+      if (asset.symbol === "ETH") {
+        amount = toNumber(wallets.ETH ?? walletSource.eth_balance);
+        walletAddress = walletSource.eth_address || "";
+      }
+
+      if (asset.symbol === "USDT") {
+        amount = toNumber(wallets.USDT ?? walletSource.usdt_balance);
+        walletAddress = walletSource.usdt_address || "";
+      }
+
+      return {
+        id: asset.id,
+        symbol: asset.symbol,
+        name: asset.name,
+        amount,
+        locked: 0,
+        walletAddress,
+      };
+    });
   }, [walletSource]);
 
   const walletRows = useMemo(() => {
@@ -445,7 +440,7 @@ const MyWallets = () => {
             My Wallets
           </h1>
           <p className="mt-2 max-w-2xl text-sm text-slate-400 sm:text-base">
-            Manage your crypto balances, monitor available and locked funds, and access
+            Manage your crypto balances, monitor available funds, and access
             deposit, withdrawal, and transfer actions in one place.
           </p>
         </div>
@@ -583,7 +578,7 @@ const MyWallets = () => {
             <div className="text-sm font-medium uppercase tracking-[0.18em] text-slate-400">
               Wallet Assets
             </div>
-            <div className="mt-1 text-lg font-semibold">All crypto balances</div>
+            <div className="mt-1 text-lg font-semibold">BTC, ETH and USDT balances</div>
           </div>
 
           <div className="relative w-full max-w-md">
