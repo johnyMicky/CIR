@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Bell,
   ChevronDown,
@@ -21,6 +21,8 @@ import {
   TrendingDown,
   Copy,
   CheckCircle2,
+  X,
+  BadgeDollarSign,
 } from "lucide-react";
 
 type MarketCoin = {
@@ -52,14 +54,25 @@ type Transaction = {
   date: string;
 };
 
-const sidebarItems = [
-  { label: "Dashboard", icon: LayoutDashboard, active: true },
-  { label: "My Wallets", icon: Wallet },
-  { label: "Send / Receive", icon: ArrowUpDown },
-  { label: "Exchange / Swap", icon: RefreshCw },
-  { label: "Transactions History", icon: History },
-  { label: "Settings", icon: Settings },
-  { label: "Support / Help", icon: LifeBuoy },
+type SidebarKey =
+  | "dashboard"
+  | "wallets"
+  | "send_receive"
+  | "swap"
+  | "history"
+  | "settings"
+  | "support";
+
+type ModalType = "deposit" | "withdraw" | "transfer" | "buy" | null;
+
+const sidebarItems: { key: SidebarKey; label: string; icon: React.ElementType }[] = [
+  { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { key: "wallets", label: "My Wallets", icon: Wallet },
+  { key: "send_receive", label: "Send / Receive", icon: ArrowUpDown },
+  { key: "swap", label: "Exchange / Swap", icon: RefreshCw },
+  { key: "history", label: "Transactions History", icon: History },
+  { key: "settings", label: "Settings", icon: Settings },
+  { key: "support", label: "Support / Help", icon: LifeBuoy },
 ];
 
 const portfolio: PortfolioAsset[] = [
@@ -81,9 +94,24 @@ const COLORS = ["#3B82F6", "#22D3EE", "#8B5CF6", "#10B981", "#F59E0B"];
 const Dashboard = () => {
   const [showBalance, setShowBalance] = useState(true);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [search, setSearch] = useState("");
   const [market, setMarket] = useState<MarketCoin[]>([]);
   const [loadingMarket, setLoadingMarket] = useState(true);
+  const [activeTab, setActiveTab] = useState<SidebarKey>("dashboard");
+  const [modalType, setModalType] = useState<ModalType>(null);
+  const [copiedTxId, setCopiedTxId] = useState<string>("");
+  const [toast, setToast] = useState<string>("");
+
+  const [formAsset, setFormAsset] = useState("BTC");
+  const [formAmount, setFormAmount] = useState("");
+  const [formAddress, setFormAddress] = useState("");
+  const [formCardName, setFormCardName] = useState("");
+  const [formCardNumber, setFormCardNumber] = useState("");
+  const [formTransferUser, setFormTransferUser] = useState("");
+
+  const notificationRef = useRef<HTMLDivElement | null>(null);
+  const profileRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const fetchMarket = async () => {
@@ -119,6 +147,29 @@ const Dashboard = () => {
 
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    const onClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+
+      if (notificationRef.current && !notificationRef.current.contains(target)) {
+        setShowNotifications(false);
+      }
+
+      if (profileRef.current && !profileRef.current.contains(target)) {
+        setShowProfileMenu(false);
+      }
+    };
+
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, []);
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => setToast(""), 2200);
+    return () => clearTimeout(timer);
+  }, [toast]);
 
   const marketMap = useMemo(() => {
     return market.reduce<Record<string, MarketCoin>>((acc, coin) => {
@@ -267,6 +318,114 @@ const Dashboard = () => {
       maximumFractionDigits: value < 1 ? 6 : 2,
     }).format(value);
 
+  const resetModalFields = () => {
+    setFormAsset("BTC");
+    setFormAmount("");
+    setFormAddress("");
+    setFormCardName("");
+    setFormCardNumber("");
+    setFormTransferUser("");
+  };
+
+  const openModal = (type: ModalType) => {
+    resetModalFields();
+    setModalType(type);
+  };
+
+  const closeModal = () => {
+    setModalType(null);
+    resetModalFields();
+  };
+
+  const handleSidebarClick = (key: SidebarKey, label: string) => {
+    setActiveTab(key);
+
+    if (key !== "dashboard") {
+      setToast(`${label} page is ready for next step`);
+    }
+  };
+
+  const handleLogout = () => {
+    setShowProfileMenu(false);
+    setToast("Logout action clicked");
+  };
+
+  const handleExport = () => {
+    const rows = [
+      ["Type", "Asset", "Amount", "USD Value", "Status", "Date", "Transaction ID"],
+      ...filteredTransactions.map((tx) => [
+        tx.type,
+        tx.asset,
+        String(tx.amount),
+        String(tx.usdValue),
+        tx.status,
+        tx.date,
+        tx.id,
+      ]),
+    ];
+
+    const csv = rows
+      .map((row) =>
+        row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")
+      )
+      .join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "transactions.csv";
+    link.click();
+    URL.revokeObjectURL(url);
+
+    setToast("Transactions exported");
+  };
+
+  const copyTxId = async (id: string) => {
+    try {
+      await navigator.clipboard.writeText(id);
+      setCopiedTxId(id);
+      setToast(`Copied ${id}`);
+      setTimeout(() => setCopiedTxId(""), 1500);
+    } catch {
+      setToast("Copy failed");
+    }
+  };
+
+  const submitAction = () => {
+    if (!modalType) return;
+
+    if ((modalType === "deposit" || modalType === "withdraw") && !formAmount) {
+      setToast("Enter amount");
+      return;
+    }
+
+    if (modalType === "withdraw" && !formAddress) {
+      setToast("Enter wallet address");
+      return;
+    }
+
+    if (modalType === "transfer" && (!formAmount || !formTransferUser)) {
+      setToast("Fill all transfer fields");
+      return;
+    }
+
+    if (modalType === "buy" && (!formAmount || !formCardName || !formCardNumber)) {
+      setToast("Fill all card fields");
+      return;
+    }
+
+    const labelMap: Record<Exclude<ModalType, null>, string> = {
+      deposit: "Deposit request submitted",
+      withdraw: "Withdraw request submitted",
+      transfer: "Transfer request submitted",
+      buy: "Buy Crypto request submitted",
+    };
+
+    setToast(labelMap[modalType]);
+    closeModal();
+  };
+
   const getStatusClass = (status: TxStatus) => {
     if (status === "Completed") {
       return "bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-400/20";
@@ -284,11 +443,156 @@ const Dashboard = () => {
     return <ArrowUpRight className="h-4 w-4 text-sky-400" />;
   };
 
+  const renderModalTitle = () => {
+    if (modalType === "deposit") return "Deposit";
+    if (modalType === "withdraw") return "Withdraw";
+    if (modalType === "transfer") return "Transfer";
+    if (modalType === "buy") return "Buy Crypto";
+    return "";
+  };
+
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(34,211,238,0.12),_transparent_18%),radial-gradient(circle_at_right_top,_rgba(139,92,246,0.14),_transparent_22%),linear-gradient(180deg,#07111F_0%,#0A1427_45%,#0C1730_100%)] text-white">
+      {toast && (
+        <div className="fixed right-4 top-4 z-[100] rounded-2xl border border-cyan-400/20 bg-[#0F1B33]/95 px-4 py-3 text-sm text-cyan-100 shadow-2xl backdrop-blur-xl">
+          {toast}
+        </div>
+      )}
+
+      {modalType && (
+        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-lg rounded-[28px] border border-white/10 bg-[#0D1830] p-5 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm uppercase tracking-[0.18em] text-slate-400">
+                  Action
+                </div>
+                <div className="mt-1 text-xl font-semibold">{renderModalTitle()}</div>
+              </div>
+              <button
+                onClick={closeModal}
+                className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="mt-6 space-y-4">
+              <div>
+                <label className="mb-2 block text-sm text-slate-300">Asset</label>
+                <select
+                  value={formAsset}
+                  onChange={(e) => setFormAsset(e.target.value)}
+                  className="h-12 w-full rounded-2xl border border-white/10 bg-white/5 px-4 text-sm outline-none focus:border-cyan-400/40"
+                >
+                  <option value="BTC" className="bg-slate-900">
+                    BTC
+                  </option>
+                  <option value="ETH" className="bg-slate-900">
+                    ETH
+                  </option>
+                  <option value="USDT" className="bg-slate-900">
+                    USDT
+                  </option>
+                  <option value="SOL" className="bg-slate-900">
+                    SOL
+                  </option>
+                  <option value="BNB" className="bg-slate-900">
+                    BNB
+                  </option>
+                </select>
+              </div>
+
+              {(modalType === "deposit" || modalType === "withdraw" || modalType === "transfer" || modalType === "buy") && (
+                <div>
+                  <label className="mb-2 block text-sm text-slate-300">Amount</label>
+                  <input
+                    value={formAmount}
+                    onChange={(e) => setFormAmount(e.target.value)}
+                    placeholder="Enter amount"
+                    className="h-12 w-full rounded-2xl border border-white/10 bg-white/5 px-4 text-sm outline-none placeholder:text-slate-500 focus:border-cyan-400/40"
+                  />
+                </div>
+              )}
+
+              {modalType === "deposit" && (
+                <div className="rounded-3xl border border-cyan-400/10 bg-cyan-500/5 p-4">
+                  <div className="text-sm text-slate-300">Deposit wallet address</div>
+                  <div className="mt-2 break-all rounded-2xl bg-white/5 px-3 py-3 text-sm text-cyan-200">
+                    0xAxcE1ci9F4b8D3Aaa0B8471dEf1234567890AbCd
+                  </div>
+                </div>
+              )}
+
+              {modalType === "withdraw" && (
+                <div>
+                  <label className="mb-2 block text-sm text-slate-300">Wallet Address</label>
+                  <input
+                    value={formAddress}
+                    onChange={(e) => setFormAddress(e.target.value)}
+                    placeholder="Recipient wallet address"
+                    className="h-12 w-full rounded-2xl border border-white/10 bg-white/5 px-4 text-sm outline-none placeholder:text-slate-500 focus:border-cyan-400/40"
+                  />
+                </div>
+              )}
+
+              {modalType === "transfer" && (
+                <div>
+                  <label className="mb-2 block text-sm text-slate-300">Recipient Username / Email</label>
+                  <input
+                    value={formTransferUser}
+                    onChange={(e) => setFormTransferUser(e.target.value)}
+                    placeholder="Enter user email or username"
+                    className="h-12 w-full rounded-2xl border border-white/10 bg-white/5 px-4 text-sm outline-none placeholder:text-slate-500 focus:border-cyan-400/40"
+                  />
+                </div>
+              )}
+
+              {modalType === "buy" && (
+                <>
+                  <div>
+                    <label className="mb-2 block text-sm text-slate-300">Cardholder Name</label>
+                    <input
+                      value={formCardName}
+                      onChange={(e) => setFormCardName(e.target.value)}
+                      placeholder="Full name"
+                      className="h-12 w-full rounded-2xl border border-white/10 bg-white/5 px-4 text-sm outline-none placeholder:text-slate-500 focus:border-cyan-400/40"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-2 block text-sm text-slate-300">Card Number</label>
+                    <input
+                      value={formCardNumber}
+                      onChange={(e) => setFormCardNumber(e.target.value)}
+                      placeholder="1234 5678 9012 3456"
+                      className="h-12 w-full rounded-2xl border border-white/10 bg-white/5 px-4 text-sm outline-none placeholder:text-slate-500 focus:border-cyan-400/40"
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="mt-6 flex items-center justify-end gap-3">
+              <button
+                onClick={closeModal}
+                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-200 hover:bg-white/10"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submitAction}
+                className="rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 px-5 py-3 text-sm font-medium text-white shadow-[0_0_25px_rgba(34,211,238,0.25)] hover:opacity-95"
+              >
+                Submit
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex min-h-screen">
         <aside className="hidden xl:flex w-72 shrink-0 flex-col border-r border-white/10 bg-[#0A1220]/80 backdrop-blur-xl">
-          <div className="px-6 py-6 border-b border-white/10">
+          <div className="border-b border-white/10 px-6 py-6">
             <div className="flex items-center gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-400 via-blue-500 to-violet-500 shadow-[0_0_30px_rgba(59,130,246,0.35)]">
                 <Wallet className="h-5 w-5 text-white" />
@@ -300,14 +604,17 @@ const Dashboard = () => {
             </div>
           </div>
 
-          <nav className="flex-1 px-4 py-5 space-y-2">
+          <nav className="flex-1 space-y-2 px-4 py-5">
             {sidebarItems.map((item) => {
               const Icon = item.icon;
+              const isActive = activeTab === item.key;
+
               return (
                 <button
-                  key={item.label}
-                  className={`w-full rounded-2xl px-4 py-3 transition-all duration-200 ${
-                    item.active
+                  key={item.key}
+                  onClick={() => handleSidebarClick(item.key, item.label)}
+                  className={`w-full rounded-2xl px-4 py-3 text-left transition-all duration-200 ${
+                    isActive
                       ? "bg-gradient-to-r from-blue-500/20 via-cyan-400/10 to-violet-500/20 text-white shadow-[0_0_25px_rgba(59,130,246,0.15)] ring-1 ring-cyan-300/15"
                       : "text-slate-300 hover:bg-white/5 hover:text-white"
                   }`}
@@ -321,29 +628,28 @@ const Dashboard = () => {
             })}
           </nav>
 
-          <div className="p-4 border-t border-white/10">
+          <div className="border-t border-white/10 p-4">
             <div className="rounded-3xl bg-white/5 p-4 ring-1 ring-white/10">
               <div className="text-sm font-medium">Secure wallet access</div>
               <div className="mt-1 text-xs leading-5 text-slate-400">
-                Clean responsive dashboard with live crypto prices and asset
-                breakdown.
+                Clean responsive dashboard with live crypto prices and asset breakdown.
               </div>
             </div>
           </div>
         </aside>
 
-        <div className="flex-1 min-w-0">
+        <div className="min-w-0 flex-1">
           <header className="sticky top-0 z-40 border-b border-white/10 bg-[#081120]/75 backdrop-blur-xl">
             <div className="px-4 sm:px-6 lg:px-8">
               <div className="flex h-20 items-center gap-3 sm:gap-4">
-                <div className="xl:hidden flex items-center gap-3 min-w-[140px]">
+                <div className="flex min-w-[140px] items-center gap-3 xl:hidden">
                   <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-400 via-blue-500 to-violet-500">
                     <Wallet className="h-5 w-5 text-white" />
                   </div>
                   <div className="text-sm font-semibold">Axcelci</div>
                 </div>
 
-                <div className="relative flex-1 max-w-2xl">
+                <div className="relative max-w-2xl flex-1">
                   <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                   <input
                     type="text"
@@ -356,13 +662,13 @@ const Dashboard = () => {
 
                 <button
                   onClick={() => setShowBalance((s) => !s)}
-                  className="hidden sm:flex h-12 items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 text-sm text-slate-200 hover:bg-white/10"
+                  className="hidden h-12 items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 text-sm text-slate-200 hover:bg-white/10 sm:flex"
                 >
                   {showBalance ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
                   <span>{showBalance ? "Hide" : "Show"}</span>
                 </button>
 
-                <div className="relative">
+                <div className="relative" ref={notificationRef}>
                   <button
                     onClick={() => setShowNotifications((s) => !s)}
                     className="relative flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10"
@@ -398,25 +704,60 @@ const Dashboard = () => {
                   )}
                 </div>
 
-                <button className="flex h-12 items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-3 sm:px-4 hover:bg-white/10">
-                  <img
-                    src="https://i.pravatar.cc/100?img=12"
-                    alt="User"
-                    className="h-8 w-8 rounded-full object-cover"
-                  />
-                  <div className="hidden md:block text-left">
-                    <div className="text-sm font-medium">Michael Carter</div>
-                    <div className="text-xs text-slate-400">Client account</div>
-                  </div>
-                  <ChevronDown className="hidden md:block h-4 w-4 text-slate-400" />
-                </button>
+                <div className="relative" ref={profileRef}>
+                  <button
+                    onClick={() => setShowProfileMenu((s) => !s)}
+                    className="flex h-12 items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-3 hover:bg-white/10 sm:px-4"
+                  >
+                    <img
+                      src="https://i.pravatar.cc/100?img=12"
+                      alt="User"
+                      className="h-8 w-8 rounded-full object-cover"
+                    />
+                    <div className="hidden text-left md:block">
+                      <div className="text-sm font-medium">Michael Carter</div>
+                      <div className="text-xs text-slate-400">Client account</div>
+                    </div>
+                    <ChevronDown className="hidden h-4 w-4 text-slate-400 md:block" />
+                  </button>
+
+                  {showProfileMenu && (
+                    <div className="absolute right-0 mt-3 w-56 rounded-3xl border border-white/10 bg-[#0F1B33]/95 p-2 shadow-2xl backdrop-blur-xl">
+                      <button
+                        onClick={() => {
+                          setToast("Profile clicked");
+                          setShowProfileMenu(false);
+                        }}
+                        className="w-full rounded-2xl px-3 py-3 text-left text-sm hover:bg-white/5"
+                      >
+                        Profile
+                      </button>
+                      <button
+                        onClick={() => {
+                          setToast("Settings clicked");
+                          setShowProfileMenu(false);
+                          setActiveTab("settings");
+                        }}
+                        className="w-full rounded-2xl px-3 py-3 text-left text-sm hover:bg-white/5"
+                      >
+                        Settings
+                      </button>
+                      <button
+                        onClick={handleLogout}
+                        className="w-full rounded-2xl px-3 py-3 text-left text-sm text-rose-200 hover:bg-rose-500/10"
+                      >
+                        Logout
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </header>
 
           <main className="px-4 py-6 sm:px-6 lg:px-8">
             <div className="grid grid-cols-1 gap-6 2xl:grid-cols-[1.45fr_1fr]">
-              <section className="overflow-hidden rounded-[28px] border border-cyan-300/10 bg-[linear-gradient(135deg,rgba(59,130,246,0.16),rgba(34,211,238,0.10),rgba(139,92,246,0.14))] p-5 sm:p-6 lg:p-7 shadow-[0_20px_60px_rgba(0,0,0,0.28)]">
+              <section className="overflow-hidden rounded-[28px] border border-cyan-300/10 bg-[linear-gradient(135deg,rgba(59,130,246,0.16),rgba(34,211,238,0.10),rgba(139,92,246,0.14))] p-5 shadow-[0_20px_60px_rgba(0,0,0,0.28)] sm:p-6 lg:p-7">
                 <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
                   <div className="min-w-0">
                     <div className="text-sm font-medium uppercase tracking-[0.18em] text-cyan-200/80">
@@ -424,7 +765,7 @@ const Dashboard = () => {
                     </div>
 
                     <div className="mt-4 flex flex-wrap items-end gap-3">
-                      <div className="min-w-0 max-w-full text-3xl font-semibold leading-none tracking-tight sm:text-4xl lg:text-5xl tabular-nums">
+                      <div className="max-w-full min-w-0 text-3xl font-semibold leading-none tracking-tight tabular-nums sm:text-4xl lg:text-5xl">
                         {showBalance ? formatMoney(totalAssets) : "••••••••"}
                       </div>
 
@@ -470,7 +811,7 @@ const Dashboard = () => {
                 </div>
               </section>
 
-              <section className="rounded-[28px] border border-white/10 bg-white/5 p-5 sm:p-6 lg:p-7 backdrop-blur-xl shadow-[0_20px_60px_rgba(0,0,0,0.22)]">
+              <section className="rounded-[28px] border border-white/10 bg-white/5 p-5 shadow-[0_20px_60px_rgba(0,0,0,0.22)] backdrop-blur-xl sm:p-6 lg:p-7">
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="text-sm font-medium uppercase tracking-[0.18em] text-slate-400">
@@ -486,28 +827,33 @@ const Dashboard = () => {
                       label: "Deposit",
                       icon: ArrowDownLeft,
                       cls: "from-emerald-500/25 to-cyan-500/15 text-emerald-300",
+                      onClick: () => openModal("deposit"),
                     },
                     {
                       label: "Withdraw",
                       icon: ArrowUpRight,
                       cls: "from-rose-500/25 to-orange-500/15 text-orange-300",
+                      onClick: () => openModal("withdraw"),
                     },
                     {
                       label: "Transfer",
                       icon: Send,
                       cls: "from-blue-500/25 to-cyan-500/15 text-sky-300",
+                      onClick: () => openModal("transfer"),
                     },
                     {
                       label: "Buy Crypto",
                       icon: CreditCard,
                       cls: "from-violet-500/25 to-fuchsia-500/15 text-violet-300",
+                      onClick: () => openModal("buy"),
                     },
                   ].map((action) => {
                     const Icon = action.icon;
                     return (
                       <button
                         key={action.label}
-                        className={`group rounded-3xl bg-gradient-to-br ${action.cls} p-4 sm:p-5 text-left ring-1 ring-white/10 transition duration-200 hover:scale-[1.02] hover:ring-white/20`}
+                        onClick={action.onClick}
+                        className={`group rounded-3xl bg-gradient-to-br ${action.cls} p-4 text-left ring-1 ring-white/10 transition duration-200 hover:scale-[1.02] hover:ring-white/20 sm:p-5`}
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10">
@@ -526,7 +872,7 @@ const Dashboard = () => {
             </div>
 
             <div className="mt-6 grid grid-cols-1 gap-6 2xl:grid-cols-[1.25fr_1fr]">
-              <section className="rounded-[28px] border border-white/10 bg-white/5 p-5 sm:p-6 lg:p-7 backdrop-blur-xl">
+              <section className="rounded-[28px] border border-white/10 bg-white/5 p-5 backdrop-blur-xl sm:p-6 lg:p-7">
                 <div className="flex flex-col gap-6">
                   <div>
                     <div className="text-sm font-medium uppercase tracking-[0.18em] text-slate-400">
@@ -593,7 +939,7 @@ const Dashboard = () => {
                       >
                         <div className="flex min-w-0 items-center gap-3">
                           <div
-                            className="h-11 w-11 rounded-2xl ring-1 ring-white/10 flex items-center justify-center overflow-hidden"
+                            className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-2xl ring-1 ring-white/10"
                             style={{
                               background:
                                 "linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03))",
@@ -650,7 +996,7 @@ const Dashboard = () => {
                 </div>
               </section>
 
-              <section className="rounded-[28px] border border-white/10 bg-white/5 p-5 sm:p-6 lg:p-7 backdrop-blur-xl">
+              <section className="rounded-[28px] border border-white/10 bg-white/5 p-5 backdrop-blur-xl sm:p-6 lg:p-7">
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="text-sm font-medium uppercase tracking-[0.18em] text-slate-400">
@@ -659,9 +1005,12 @@ const Dashboard = () => {
                     <div className="mt-1 text-lg font-semibold">Top crypto movers</div>
                   </div>
 
-                  <div className="rounded-full bg-cyan-500/10 px-3 py-1 text-xs text-cyan-300 ring-1 ring-cyan-400/20">
+                  <button
+                    onClick={() => setToast("Market refresh is automatic")}
+                    className="rounded-full bg-cyan-500/10 px-3 py-1 text-xs text-cyan-300 ring-1 ring-cyan-400/20"
+                  >
                     Auto refresh
-                  </div>
+                  </button>
                 </div>
 
                 <div className="mt-6 space-y-3">
@@ -677,7 +1026,7 @@ const Dashboard = () => {
                           key={coin.id}
                           className="flex items-center justify-between gap-4 rounded-3xl bg-white/5 p-4 ring-1 ring-white/8"
                         >
-                          <div className="flex items-center gap-3 min-w-0">
+                          <div className="min-w-0 flex items-center gap-3">
                             <img
                               src={coin.image}
                               alt={coin.name}
@@ -685,7 +1034,7 @@ const Dashboard = () => {
                             />
                             <div className="min-w-0">
                               <div className="font-medium">{coin.name}</div>
-                              <div className="text-sm text-slate-400 uppercase">
+                              <div className="text-sm uppercase text-slate-400">
                                 {coin.symbol}
                               </div>
                             </div>
@@ -712,7 +1061,7 @@ const Dashboard = () => {
               </section>
             </div>
 
-            <section className="mt-6 rounded-[28px] border border-white/10 bg-white/5 p-5 sm:p-6 lg:p-7 backdrop-blur-xl">
+            <section className="mt-6 rounded-[28px] border border-white/10 bg-white/5 p-5 backdrop-blur-xl sm:p-6 lg:p-7">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <div className="text-sm font-medium uppercase tracking-[0.18em] text-slate-400">
@@ -721,7 +1070,10 @@ const Dashboard = () => {
                   <div className="mt-1 text-lg font-semibold">Latest activity</div>
                 </div>
 
-                <button className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-200 hover:bg-white/10">
+                <button
+                  onClick={handleExport}
+                  className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-200 hover:bg-white/10"
+                >
                   <Copy className="h-4 w-4" />
                   Export
                 </button>
@@ -729,7 +1081,7 @@ const Dashboard = () => {
 
               <div className="mt-6 overflow-x-auto">
                 <div className="min-w-[820px]">
-                  <div className="grid grid-cols-[1.4fr_0.9fr_1fr_1fr_1fr] gap-4 px-4 py-3 text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
+                  <div className="grid grid-cols-[1.55fr_0.9fr_1fr_1fr_1fr] gap-4 px-4 py-3 text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
                     <div>Type</div>
                     <div>Asset</div>
                     <div>Amount</div>
@@ -741,7 +1093,7 @@ const Dashboard = () => {
                     {filteredTransactions.slice(0, 10).map((tx) => (
                       <div
                         key={tx.id}
-                        className="grid grid-cols-[1.4fr_0.9fr_1fr_1fr_1fr] gap-4 rounded-3xl bg-white/5 px-4 py-4 ring-1 ring-white/8 transition hover:bg-white/[0.07]"
+                        className="grid grid-cols-[1.55fr_0.9fr_1fr_1fr_1fr] gap-4 rounded-3xl bg-white/5 px-4 py-4 ring-1 ring-white/8 transition hover:bg-white/[0.07]"
                       >
                         <div className="flex items-center gap-3">
                           <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/8">
@@ -749,7 +1101,19 @@ const Dashboard = () => {
                           </div>
                           <div>
                             <div className="font-medium">{tx.type}</div>
-                            <div className="text-sm text-slate-400">{tx.id}</div>
+                            <div className="mt-1 flex items-center gap-2 text-sm text-slate-400">
+                              <span>{tx.id}</span>
+                              <button
+                                onClick={() => copyTxId(tx.id)}
+                                className="rounded-lg p-1 hover:bg-white/10"
+                                title="Copy transaction ID"
+                              >
+                                <Copy className="h-3.5 w-3.5" />
+                              </button>
+                              {copiedTxId === tx.id && (
+                                <span className="text-cyan-300">Copied</span>
+                              )}
+                            </div>
                           </div>
                         </div>
 
@@ -764,7 +1128,7 @@ const Dashboard = () => {
                             <div className="font-medium tabular-nums">
                               {formatCoinAmount(tx.amount)} {tx.asset}
                             </div>
-                            <div className="text-sm text-slate-400 tabular-nums">
+                            <div className="text-sm tabular-nums text-slate-400">
                               {showBalance ? formatMoney(tx.usdValue) : "••••••"}
                             </div>
                           </div>
@@ -804,11 +1168,30 @@ const Dashboard = () => {
             </div>
 
             <div className="mt-6 flex justify-end">
-              <button className="inline-flex items-center gap-2 rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 py-2 text-sm text-rose-200 hover:bg-rose-500/15">
+              <button
+                onClick={handleLogout}
+                className="inline-flex items-center gap-2 rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 py-2 text-sm text-rose-200 hover:bg-rose-500/15"
+              >
                 <LogOut className="h-4 w-4" />
                 Logout
               </button>
             </div>
+
+            {activeTab !== "dashboard" && (
+              <section className="mt-6 rounded-[28px] border border-cyan-400/10 bg-cyan-500/5 p-5 ring-1 ring-cyan-300/10">
+                <div className="flex items-start gap-3">
+                  <BadgeDollarSign className="mt-0.5 h-5 w-5 text-cyan-300" />
+                  <div>
+                    <div className="font-medium text-cyan-200">
+                      {sidebarItems.find((i) => i.key === activeTab)?.label}
+                    </div>
+                    <div className="mt-1 text-sm text-slate-300">
+                      This section is selected. Next step is connecting it to a real page or route.
+                    </div>
+                  </div>
+                </div>
+              </section>
+            )}
           </main>
         </div>
       </div>
