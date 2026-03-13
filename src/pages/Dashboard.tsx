@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Bell,
   ChevronDown,
@@ -92,6 +93,8 @@ const mockNotifications = [
 const COLORS = ["#3B82F6", "#22D3EE", "#8B5CF6", "#10B981", "#F59E0B"];
 
 const Dashboard = () => {
+  const navigate = useNavigate();
+
   const [showBalance, setShowBalance] = useState(true);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -340,9 +343,22 @@ const Dashboard = () => {
   const handleSidebarClick = (key: SidebarKey, label: string) => {
     setActiveTab(key);
 
-    if (key !== "dashboard") {
-      setToast(`${label} page is ready for next step`);
+    if (key === "dashboard") {
+      navigate("/dashboard");
+      return;
     }
+
+    if (key === "wallets") {
+      navigate("/my-wallets");
+      return;
+    }
+
+    if (key === "history") {
+      navigate("/history");
+      return;
+    }
+
+    setToast(`${label} page is ready for next step`);
   };
 
   const handleLogout = () => {
@@ -503,7 +519,10 @@ const Dashboard = () => {
                 </select>
               </div>
 
-              {(modalType === "deposit" || modalType === "withdraw" || modalType === "transfer" || modalType === "buy") && (
+              {(modalType === "deposit" ||
+                modalType === "withdraw" ||
+                modalType === "transfer" ||
+                modalType === "buy") && (
                 <div>
                   <label className="mb-2 block text-sm text-slate-300">Amount</label>
                   <input
@@ -734,9 +753,9 @@ const Dashboard = () => {
                       </button>
                       <button
                         onClick={() => {
-                          setToast("Settings clicked");
                           setShowProfileMenu(false);
                           setActiveTab("settings");
+                          setToast("Settings page is ready for next step");
                         }}
                         className="w-full rounded-2xl px-3 py-3 text-left text-sm hover:bg-white/5"
                       >
