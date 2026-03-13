@@ -64,14 +64,15 @@ type ActivityItem = {
   type?: string;
   page?: string;
   created_at?: number | string;
-  details?: any;
+  details?: Record<string, any>;
 };
 
-type MarketState = {
-  BTC: { price: number; image: string };
-  ETH: { price: number; image: string };
-  USDT: { price: number; image: string };
+type MarketCoin = {
+  price: number;
+  image: string;
 };
+
+type MarketState = Record<CoinKey, MarketCoin>;
 
 const DEFAULT_MARKET: MarketState = {
   BTC: { price: 0, image: "" },
@@ -102,33 +103,48 @@ const coinUi = {
     label: "Bitcoin",
     short: "BTC",
     icon: Bitcoin,
-    glow: "from-amber-400/20 via-yellow-400/10 to-transparent",
     chip: "border-amber-400/20 bg-amber-500/10 text-amber-300",
-    ring: "ring-amber-400/20",
     border: "border-amber-400/20",
-    bg: "bg-amber-500/10"
+    bg: "bg-amber-500/10",
+    glowClass:
+      "bg-[radial-gradient(circle_at_top_right,rgba(251,191,36,0.18),transparent_60%)]"
   },
   ETH: {
     label: "Ethereum",
     short: "ETH",
     icon: Coins,
-    glow: "from-slate-200/20 via-slate-400/10 to-transparent",
     chip: "border-slate-300/20 bg-slate-400/10 text-slate-200",
-    ring: "ring-slate-300/20",
     border: "border-slate-300/20",
-    bg: "bg-slate-400/10"
+    bg: "bg-slate-400/10",
+    glowClass:
+      "bg-[radial-gradient(circle_at_top_right,rgba(148,163,184,0.18),transparent_60%)]"
   },
   USDT: {
     label: "Tether",
     short: "USDT",
     icon: Wallet,
-    glow: "from-emerald-400/20 via-emerald-500/10 to-transparent",
     chip: "border-emerald-400/20 bg-emerald-500/10 text-emerald-300",
-    ring: "ring-emerald-400/20",
     border: "border-emerald-400/20",
-    bg: "bg-emerald-500/10"
+    bg: "bg-emerald-500/10",
+    glowClass:
+      "bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.18),transparent_60%)]"
   }
 } as const;
+
+const baseGlass =
+  "rounded-[30px] border border-white/10 bg-[linear-gradient(180deg,rgba(5,10,22,0.94),rgba(3,8,18,0.98))] shadow-[0_18px_80px_rgba(0,0,0,0.42)] backdrop-blur-xl";
+
+const darkCard =
+  "relative overflow-hidden rounded-[26px] border border-white/10 bg-[linear-gradient(180deg,rgba(7,14,28,0.94),rgba(4,10,20,0.98))] shadow-[0_10px_40px_rgba(0,0,0,0.28)]";
+
+const inputClass =
+  "w-full rounded-2xl border border-white/10 bg-[#050b16] px-4 py-3.5 text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-500/10";
+
+const modalBackdrop =
+  "fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md";
+
+const modalPanel =
+  "relative w-full max-w-2xl overflow-hidden rounded-[34px] border border-white/10 bg-[linear-gradient(180deg,rgba(4,9,18,0.98),rgba(3,8,16,0.99))] shadow-[0_35px_120px_rgba(0,0,0,0.65)]";
 
 const formatMoney = (value: number) =>
   value.toLocaleString(undefined, {
@@ -167,7 +183,7 @@ const formatLastSeen = (value?: number | string, legacy?: string) => {
   if (minutes < 60) return `${minutes} mins ago`;
   if (hours === 1) return "1 hour ago";
   if (hours < 24) return `${hours} hours ago`;
-  if (days === 1) return "1 day ago`;
+  if (days === 1) return "1 day ago";
   return `${days} days ago`;
 };
 
@@ -180,6 +196,7 @@ const formatActivityTime = (value?: number | string) => {
 
 const getCreditedAmountFromItem = (item: ActivityItem) => {
   const details = item.details || {};
+
   const rawAmount =
     details.creditedAmount ??
     details.amount ??
@@ -256,19 +273,6 @@ const shouldShowInClientLog = (item: ActivityItem) => {
   return positiveSignal && hasAmount && !negativeSignal;
 };
 
-const baseGlass =
-  "rounded-[30px] border border-white/10 bg-[linear-gradient(180deg,rgba(5,10,22,0.94),rgba(3,8,18,0.98))] shadow-[0_18px_80px_rgba(0,0,0,0.42)] backdrop-blur-xl";
-const darkCard =
-  "relative overflow-hidden rounded-[26px] border border-white/10 bg-[linear-gradient(180deg,rgba(7,14,28,0.94),rgba(4,10,20,0.98))] shadow-[0_10px_40px_rgba(0,0,0,0.28)]";
-const inputClass =
-  "w-full rounded-2xl border border-white/10 bg-[#050b16] px-4 py-3.5 text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-500/10";
-const selectButtonClass =
-  "flex w-full items-center justify-between rounded-2xl border border-white/10 bg-[#050b16] px-4 py-3.5 text-left text-white transition hover:border-white/15";
-const modalBackdrop =
-  "fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md";
-const modalPanel =
-  "relative w-full max-w-2xl overflow-hidden rounded-[34px] border border-white/10 bg-[linear-gradient(180deg,rgba(4,9,18,0.98),rgba(3,8,16,0.99))] shadow-[0_35px_120px_rgba(0,0,0,0.65)]";
-
 function CoinBadge({
   coin,
   market,
@@ -283,7 +287,7 @@ function CoinBadge({
 
   return (
     <div
-      className={`flex shrink-0 items-center justify-center rounded-2xl border ${coinUi[coin].border} ${coinUi[coin].bg} overflow-hidden`}
+      className={`flex shrink-0 items-center justify-center overflow-hidden rounded-2xl border ${coinUi[coin].border} ${coinUi[coin].bg}`}
       style={{ width: size, height: size }}
     >
       {image ? (
@@ -315,24 +319,40 @@ const Dashboard = () => {
 
   const [receiveCoin, setReceiveCoin] = useState<CoinKey>("BTC");
 
-  const [depositNotice, setDepositNotice] = useState({
-    coin: "BTC" as CoinKey,
+  const [depositNotice, setDepositNotice] = useState<{
+    coin: CoinKey;
+    amount: string;
+    txid: string;
+    note: string;
+  }>({
+    coin: "BTC",
     amount: "",
     txid: "",
     note: ""
   });
 
-  const [withdrawForm, setWithdrawForm] = useState({
-    coin: "BTC" as CoinKey,
+  const [withdrawForm, setWithdrawForm] = useState<{
+    coin: CoinKey;
+    network: string;
+    amount: string;
+    address: string;
+    note: string;
+  }>({
+    coin: "BTC",
     network: NETWORKS.BTC[0],
     amount: "",
     address: "",
     note: ""
   });
 
-  const [swapForm, setSwapForm] = useState({
-    fromCoin: "BTC" as CoinKey,
-    toCoin: "USDT" as CoinKey,
+  const [swapForm, setSwapForm] = useState<{
+    fromCoin: CoinKey;
+    toCoin: CoinKey;
+    fromAmount: string;
+    note: string;
+  }>({
+    fromCoin: "BTC",
+    toCoin: "USDT",
     fromAmount: "",
     note: ""
   });
@@ -346,8 +366,11 @@ const Dashboard = () => {
     const activityRef = ref(db, `activity_logs/${user.id}`);
 
     const unsubUser = onValue(userRef, (snapshot) => {
-      if (snapshot.exists()) setUserData(snapshot.val());
-      else setUserData(null);
+      if (snapshot.exists()) {
+        setUserData(snapshot.val());
+      } else {
+        setUserData(null);
+      }
     });
 
     const unsubActivity = onValue(activityRef, (snapshot) => {
@@ -377,38 +400,37 @@ const Dashboard = () => {
 
     const loadMarket = async () => {
       try {
-        const priceRes = await fetch(
-          "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,tether&vs_currencies=usd"
+        const response = await fetch(
+          "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=bitcoin,ethereum,tether"
         );
-        const [btcRes, ethRes, usdtRes] = await Promise.all([
-          fetch("https://api.coingecko.com/api/v3/coins/bitcoin"),
-          fetch("https://api.coingecko.com/api/v3/coins/ethereum"),
-          fetch("https://api.coingecko.com/api/v3/coins/tether")
-        ]);
+        const json = await response.json();
 
-        const [priceJson, btcJson, ethJson, usdtJson] = await Promise.all([
-          priceRes.json(),
-          btcRes.json(),
-          ethRes.json(),
-          usdtRes.json()
-        ]);
+        if (!active || !Array.isArray(json)) return;
 
-        if (!active) return;
+        const nextMarket: MarketState = { ...DEFAULT_MARKET };
 
-        setMarket({
-          BTC: {
-            price: Number(priceJson?.bitcoin?.usd || 0),
-            image: String(btcJson?.image?.small || "")
-          },
-          ETH: {
-            price: Number(priceJson?.ethereum?.usd || 0),
-            image: String(ethJson?.image?.small || "")
-          },
-          USDT: {
-            price: Number(priceJson?.tether?.usd || 0),
-            image: String(usdtJson?.image?.small || "")
+        for (const item of json) {
+          if (item?.id === "bitcoin") {
+            nextMarket.BTC = {
+              price: Number(item?.current_price || 0),
+              image: String(item?.image || "")
+            };
           }
-        });
+          if (item?.id === "ethereum") {
+            nextMarket.ETH = {
+              price: Number(item?.current_price || 0),
+              image: String(item?.image || "")
+            };
+          }
+          if (item?.id === "tether") {
+            nextMarket.USDT = {
+              price: Number(item?.current_price || 0),
+              image: String(item?.image || "")
+            };
+          }
+        }
+
+        setMarket(nextMarket);
       } catch (error) {
         console.error("Failed to load market data", error);
       }
@@ -422,6 +444,18 @@ const Dashboard = () => {
       window.clearInterval(timer);
     };
   }, []);
+
+  useEffect(() => {
+    setWithdrawForm((prev) => {
+      const validNetworks = NETWORKS[prev.coin];
+      const nextNetwork = validNetworks.includes(prev.network)
+        ? prev.network
+        : validNetworks[0];
+
+      if (prev.network === nextNetwork) return prev;
+      return { ...prev, network: nextNetwork };
+    });
+  }, [withdrawForm.coin]);
 
   const balances = useMemo(() => {
     const btc = Number(userData?.btc_balance || 0);
@@ -502,19 +536,20 @@ const Dashboard = () => {
 
   const handleCopy = async (value: string, key: string) => {
     if (!value) return;
+
     try {
       await navigator.clipboard.writeText(value);
       setCopied(key);
-      setTimeout(() => setCopied(""), 1400);
-    } catch (e) {
-      console.error("Copy failed:", e);
+      window.setTimeout(() => setCopied(""), 1400);
+    } catch (error) {
+      console.error("Copy failed:", error);
     }
   };
 
-  const addActivityLog = async (type: string, details: any = {}) => {
+  const addActivityLog = async (type: string, details: Record<string, any> = {}) => {
     if (!user?.id) return;
-    const logRef = push(ref(db, `activity_logs/${user.id}`));
 
+    const logRef = push(ref(db, `activity_logs/${user.id}`));
     await set(logRef, {
       type,
       page: "/dashboard",
@@ -525,7 +560,7 @@ const Dashboard = () => {
 
   const showToast = (text: string) => {
     setToast(text);
-    setTimeout(() => setToast(""), 2200);
+    window.setTimeout(() => setToast(""), 2200);
   };
 
   const submitDepositNotice = async () => {
@@ -574,8 +609,8 @@ const Dashboard = () => {
       });
       setReceiveOpen(false);
       showToast("Deposit request sent to admin.");
-    } catch (e) {
-      console.error(e);
+    } catch (error) {
+      console.error(error);
       showToast("Failed to submit deposit request.");
     } finally {
       setSubmitting(false);
@@ -637,11 +672,10 @@ const Dashboard = () => {
         address: "",
         note: ""
       });
-
       setWithdrawOpen(false);
       showToast("Withdrawal request sent to admin.");
-    } catch (e) {
-      console.error(e);
+    } catch (error) {
+      console.error(error);
       showToast("Failed to submit withdrawal request.");
     } finally {
       setSubmitting(false);
@@ -662,6 +696,7 @@ const Dashboard = () => {
     }
 
     const amount = Number(swapForm.fromAmount || 0);
+
     if (amount > currentSwapBalance) {
       showToast("Not enough available balance.");
       return;
@@ -679,8 +714,8 @@ const Dashboard = () => {
         fromAmount: swapForm.fromAmount.trim(),
         estimatedToAmount: String(swapPreview),
         swapRate: String(swapRate),
-        status: "pending",
         note: swapForm.note.trim(),
+        status: "pending",
         created_at: Date.now()
       });
 
@@ -699,27 +734,15 @@ const Dashboard = () => {
         fromAmount: "",
         note: ""
       });
-
       setSwapOpen(false);
       showToast("Swap request sent to admin.");
-    } catch (e) {
-      console.error(e);
+    } catch (error) {
+      console.error(error);
       showToast("Failed to submit swap request.");
     } finally {
       setSubmitting(false);
     }
   };
-
-  useEffect(() => {
-    setWithdrawForm((prev) => {
-      const validNetworks = NETWORKS[prev.coin];
-      const nextNetwork = validNetworks.includes(prev.network)
-        ? prev.network
-        : validNetworks[0];
-
-      return { ...prev, network: nextNetwork };
-    });
-  }, [withdrawForm.coin]);
 
   if (!user) return null;
 
@@ -856,7 +879,7 @@ const Dashboard = () => {
                           <div className="flex items-center justify-center gap-2">
                             <ArrowUpRight
                               size={18}
-                              className="text-rose-300 transition-transform group-hover:translate-y-[-1px]"
+                              className="text-rose-300 transition-transform group-hover:-translate-y-[1px]"
                             />
                             <span className="font-semibold text-white">Withdraw</span>
                           </div>
@@ -889,7 +912,9 @@ const Dashboard = () => {
 
                       return (
                         <div key={coin} className={`${darkCard} p-4`}>
-                          <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-br opacity-70 ${coinUi[coin].glow}" />
+                          <div
+                            className={`pointer-events-none absolute inset-x-0 top-0 h-20 opacity-80 ${coinUi[coin].glowClass}`}
+                          />
                           <div className="relative flex items-start justify-between gap-4">
                             <div className="flex items-center gap-3">
                               <CoinBadge coin={coin} market={market} size={42} />
@@ -903,7 +928,9 @@ const Dashboard = () => {
                               </div>
                             </div>
 
-                            <div className={`rounded-full border px-2.5 py-1 text-[11px] ${coinUi[coin].chip}`}>
+                            <div
+                              className={`rounded-full border px-2.5 py-1 text-[11px] ${coinUi[coin].chip}`}
+                            >
                               ${formatMoney(Number(market[coin].price || 0))}
                             </div>
                           </div>
@@ -987,12 +1014,14 @@ const Dashboard = () => {
                       className="rounded-[22px] border border-white/8 bg-[#040b15]/90 px-4 py-4 transition-all hover:border-white/12 hover:bg-[#07111d]"
                     >
                       <div className="flex items-start gap-3">
-                        <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-2xl border border-cyan-400/10 bg-cyan-500/10 shrink-0">
+                        <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-cyan-400/10 bg-cyan-500/10">
                           {item.icon}
                         </div>
                         <div className="min-w-0">
                           <div className="text-sm text-slate-400">{item.label}</div>
-                          <div className="mt-1 break-all font-medium text-white">{item.value}</div>
+                          <div className="mt-1 break-all font-medium text-white">
+                            {item.value}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1003,14 +1032,29 @@ const Dashboard = () => {
 
             <div className="grid gap-4 xl:grid-cols-3">
               {([
-                { key: "btc", coin: "BTC", title: "BTC Address", value: userData?.btc_address || "" },
-                { key: "eth", coin: "ETH", title: "ETH Address", value: userData?.eth_address || "" },
-                { key: "usdt", coin: "USDT", title: "USDT Address", value: userData?.usdt_address || "" }
+                {
+                  key: "btc",
+                  coin: "BTC" as CoinKey,
+                  title: "BTC Address",
+                  value: userData?.btc_address || ""
+                },
+                {
+                  key: "eth",
+                  coin: "ETH" as CoinKey,
+                  title: "ETH Address",
+                  value: userData?.eth_address || ""
+                },
+                {
+                  key: "usdt",
+                  coin: "USDT" as CoinKey,
+                  title: "USDT Address",
+                  value: userData?.usdt_address || ""
+                }
               ] as const).map((item) => (
                 <div key={item.key} className={`${darkCard} p-5`}>
                   <div className="mb-4 flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
-                      <CoinBadge coin={item.coin as CoinKey} market={market} size={40} />
+                      <CoinBadge coin={item.coin} market={market} size={40} />
                       <div>
                         <div className="text-sm font-semibold text-white">{item.title}</div>
                         <div className="text-[11px] uppercase tracking-[0.18em] text-white/35">
@@ -1024,13 +1068,17 @@ const Dashboard = () => {
                         onClick={() => handleCopy(item.value, item.key)}
                         className="inline-flex shrink-0 items-center gap-2 rounded-full border border-cyan-400/10 bg-cyan-500/8 px-3 py-1.5 text-xs font-medium text-cyan-300 transition-colors hover:text-cyan-200"
                       >
-                        {copied === item.key ? <CheckCircle2 size={14} /> : <Copy size={14} />}
+                        {copied === item.key ? (
+                          <CheckCircle2 size={14} />
+                        ) : (
+                          <Copy size={14} />
+                        )}
                         <span>{copied === item.key ? "Copied" : "Copy"}</span>
                       </button>
                     )}
                   </div>
 
-                  <div className="rounded-2xl border border-white/8 bg-[#040b15]/90 p-4 text-sm leading-relaxed text-slate-300 break-all">
+                  <div className="break-all rounded-2xl border border-white/8 bg-[#040b15]/90 p-4 text-sm leading-relaxed text-slate-300">
                     {item.value || `No ${item.title} assigned yet`}
                   </div>
                 </div>
@@ -1145,7 +1193,7 @@ const Dashboard = () => {
                           key={coin}
                           onClick={() => {
                             setReceiveCoin(coin);
-                            setDepositNotice((p) => ({ ...p, coin }));
+                            setDepositNotice((prev) => ({ ...prev, coin }));
                           }}
                           className={`rounded-[22px] border p-3 transition-all ${
                             receiveCoin === coin
@@ -1226,8 +1274,8 @@ const Dashboard = () => {
                       <input
                         value={depositNotice.amount}
                         onChange={(e) =>
-                          setDepositNotice((p) => ({
-                            ...p,
+                          setDepositNotice((prev) => ({
+                            ...prev,
                             amount: e.target.value,
                             coin: receiveCoin
                           }))
@@ -1239,8 +1287,8 @@ const Dashboard = () => {
                       <input
                         value={depositNotice.txid}
                         onChange={(e) =>
-                          setDepositNotice((p) => ({
-                            ...p,
+                          setDepositNotice((prev) => ({
+                            ...prev,
                             txid: e.target.value,
                             coin: receiveCoin
                           }))
@@ -1252,8 +1300,8 @@ const Dashboard = () => {
                       <input
                         value={depositNotice.note}
                         onChange={(e) =>
-                          setDepositNotice((p) => ({
-                            ...p,
+                          setDepositNotice((prev) => ({
+                            ...prev,
                             note: e.target.value,
                             coin: receiveCoin
                           }))
@@ -1311,8 +1359,8 @@ const Dashboard = () => {
                         <button
                           key={coin}
                           onClick={() =>
-                            setWithdrawForm((p) => ({
-                              ...p,
+                            setWithdrawForm((prev) => ({
+                              ...prev,
                               coin,
                               network: NETWORKS[coin][0]
                             }))
@@ -1341,7 +1389,10 @@ const Dashboard = () => {
                         <select
                           value={withdrawForm.network}
                           onChange={(e) =>
-                            setWithdrawForm((p) => ({ ...p, network: e.target.value }))
+                            setWithdrawForm((prev) => ({
+                              ...prev,
+                              network: e.target.value
+                            }))
                           }
                           className={`${inputClass} appearance-none pr-10`}
                         >
@@ -1366,7 +1417,10 @@ const Dashboard = () => {
                         <input
                           value={withdrawForm.address}
                           onChange={(e) =>
-                            setWithdrawForm((p) => ({ ...p, address: e.target.value }))
+                            setWithdrawForm((prev) => ({
+                              ...prev,
+                              address: e.target.value
+                            }))
                           }
                           className={inputClass}
                           placeholder="Wallet address"
@@ -1375,9 +1429,12 @@ const Dashboard = () => {
                           onClick={async () => {
                             try {
                               const text = await navigator.clipboard.readText();
-                              setWithdrawForm((p) => ({ ...p, address: text }));
-                            } catch (e) {
-                              console.error("Clipboard read failed", e);
+                              setWithdrawForm((prev) => ({
+                                ...prev,
+                                address: text
+                              }));
+                            } catch (error) {
+                              console.error("Clipboard read failed", error);
                             }
                           }}
                           className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-sm font-medium text-white transition hover:bg-white/[0.08]"
@@ -1395,7 +1452,10 @@ const Dashboard = () => {
                         <input
                           value={withdrawForm.amount}
                           onChange={(e) =>
-                            setWithdrawForm((p) => ({ ...p, amount: e.target.value }))
+                            setWithdrawForm((prev) => ({
+                              ...prev,
+                              amount: e.target.value
+                            }))
                           }
                           className={`${inputClass} pr-20`}
                           placeholder={`0.00 ${withdrawForm.coin}`}
@@ -1404,8 +1464,8 @@ const Dashboard = () => {
                         />
                         <button
                           onClick={() =>
-                            setWithdrawForm((p) => ({
-                              ...p,
+                            setWithdrawForm((prev) => ({
+                              ...prev,
                               amount: String(currentWithdrawBalance)
                             }))
                           }
@@ -1417,7 +1477,8 @@ const Dashboard = () => {
 
                       <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
                         <span>
-                          Available: {formatCoinAmount(withdrawForm.coin, currentWithdrawBalance)}{" "}
+                          Available:{" "}
+                          {formatCoinAmount(withdrawForm.coin, currentWithdrawBalance)}{" "}
                           {withdrawForm.coin}
                         </span>
                         <span>
@@ -1429,7 +1490,10 @@ const Dashboard = () => {
                     <input
                       value={withdrawForm.note}
                       onChange={(e) =>
-                        setWithdrawForm((p) => ({ ...p, note: e.target.value }))
+                        setWithdrawForm((prev) => ({
+                          ...prev,
+                          note: e.target.value
+                        }))
                       }
                       className={inputClass}
                       placeholder="Note for admin (optional)"
@@ -1466,9 +1530,14 @@ const Dashboard = () => {
 
                       <div className="border-t border-white/8 pt-3">
                         <div className="flex items-center justify-between">
-                          <span className="text-sm text-slate-400">Estimated Receive</span>
+                          <span className="text-sm text-slate-400">
+                            Estimated Receive
+                          </span>
                           <span className="text-2xl font-black text-cyan-300">
-                            {formatCoinAmount(withdrawForm.coin, withdrawReceiveAmount)}{" "}
+                            {formatCoinAmount(
+                              withdrawForm.coin,
+                              withdrawReceiveAmount
+                            )}{" "}
                             {withdrawForm.coin}
                           </span>
                         </div>
@@ -1480,13 +1549,16 @@ const Dashboard = () => {
                     <div className="mb-4 text-sm font-semibold text-white">
                       Admin Control
                     </div>
+
                     <div className="space-y-3 text-sm text-slate-400">
                       <div className="rounded-2xl border border-white/8 bg-black/20 p-4">
-                        Every withdrawal request is saved as <span className="text-white">pending</span>.
+                        Every withdrawal request is saved as{" "}
+                        <span className="text-white">pending</span>.
                       </div>
                       <div className="rounded-2xl border border-white/8 bg-black/20 p-4">
                         Admin can <span className="text-emerald-300">approve</span> or{" "}
-                        <span className="text-rose-300">reject</span> it from the admin side.
+                        <span className="text-rose-300">reject</span> it from the
+                        admin side.
                       </div>
                     </div>
 
@@ -1538,10 +1610,15 @@ const Dashboard = () => {
                         <button
                           key={coin}
                           onClick={() =>
-                            setSwapForm((p) => ({
-                              ...p,
+                            setSwapForm((prev) => ({
+                              ...prev,
                               fromCoin: coin,
-                              toCoin: p.toCoin === coin ? (coin === "BTC" ? "ETH" : "BTC") : p.toCoin
+                              toCoin:
+                                prev.toCoin === coin
+                                  ? coin === "BTC"
+                                    ? "ETH"
+                                    : "BTC"
+                                  : prev.toCoin
                             }))
                           }
                           className={`rounded-[22px] border p-3 transition-all ${
@@ -1562,7 +1639,10 @@ const Dashboard = () => {
                       <input
                         value={swapForm.fromAmount}
                         onChange={(e) =>
-                          setSwapForm((p) => ({ ...p, fromAmount: e.target.value }))
+                          setSwapForm((prev) => ({
+                            ...prev,
+                            fromAmount: e.target.value
+                          }))
                         }
                         className={inputClass}
                         placeholder={`Amount in ${swapForm.fromCoin}`}
@@ -1570,7 +1650,8 @@ const Dashboard = () => {
                         step="any"
                       />
                       <div className="mt-2 text-xs text-slate-500">
-                        Available: {formatCoinAmount(swapForm.fromCoin, currentSwapBalance)}{" "}
+                        Available:{" "}
+                        {formatCoinAmount(swapForm.fromCoin, currentSwapBalance)}{" "}
                         {swapForm.fromCoin}
                       </div>
                     </div>
@@ -1579,10 +1660,10 @@ const Dashboard = () => {
                   <div className="flex justify-center">
                     <button
                       onClick={() =>
-                        setSwapForm((p) => ({
-                          ...p,
-                          fromCoin: p.toCoin,
-                          toCoin: p.fromCoin
+                        setSwapForm((prev) => ({
+                          ...prev,
+                          fromCoin: prev.toCoin,
+                          toCoin: prev.fromCoin
                         }))
                       }
                       className="flex h-12 w-12 items-center justify-center rounded-2xl border border-cyan-400/15 bg-cyan-500/10 text-cyan-300 transition hover:rotate-180 hover:bg-cyan-500/15"
@@ -1604,7 +1685,9 @@ const Dashboard = () => {
                           <button
                             key={coin}
                             disabled={disabled}
-                            onClick={() => setSwapForm((p) => ({ ...p, toCoin: coin }))}
+                            onClick={() =>
+                              setSwapForm((prev) => ({ ...prev, toCoin: coin }))
+                            }
                             className={`rounded-[22px] border p-3 transition-all ${
                               swapForm.toCoin === coin
                                 ? "border-cyan-400/30 bg-cyan-500/10"
@@ -1624,7 +1707,10 @@ const Dashboard = () => {
                       <input
                         value={swapForm.note}
                         onChange={(e) =>
-                          setSwapForm((p) => ({ ...p, note: e.target.value }))
+                          setSwapForm((prev) => ({
+                            ...prev,
+                            note: e.target.value
+                          }))
                         }
                         className={inputClass}
                         placeholder="Note for admin (optional)"
@@ -1635,7 +1721,9 @@ const Dashboard = () => {
 
                 <div className="space-y-4">
                   <div className="rounded-[26px] border border-white/10 bg-[#040b15]/90 p-5">
-                    <div className="mb-4 text-sm font-semibold text-white">Swap Details</div>
+                    <div className="mb-4 text-sm font-semibold text-white">
+                      Swap Details
+                    </div>
 
                     <div className="space-y-3">
                       <div className="flex items-center justify-between text-sm text-slate-400">
@@ -1656,9 +1744,12 @@ const Dashboard = () => {
 
                       <div className="border-t border-white/8 pt-3">
                         <div className="flex items-center justify-between">
-                          <span className="text-sm text-slate-400">Estimated Receive</span>
+                          <span className="text-sm text-slate-400">
+                            Estimated Receive
+                          </span>
                           <span className="text-2xl font-black text-cyan-300">
-                            {formatCoinAmount(swapForm.toCoin, swapPreview)} {swapForm.toCoin}
+                            {formatCoinAmount(swapForm.toCoin, swapPreview)}{" "}
+                            {swapForm.toCoin}
                           </span>
                         </div>
                       </div>
@@ -1669,6 +1760,7 @@ const Dashboard = () => {
                     <div className="mb-4 text-sm font-semibold text-white">
                       Execution Note
                     </div>
+
                     <div className="space-y-3 text-sm text-slate-400">
                       <div className="rounded-2xl border border-white/8 bg-black/20 p-4">
                         This is a quote preview based on current market pricing.
