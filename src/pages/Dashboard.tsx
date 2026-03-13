@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
+import { onAuthStateChanged } from "firebase/auth";
+import { onValue, ref } from "firebase/database";
 import {
   ArrowDownLeft,
   ArrowUpRight,
@@ -15,6 +17,8 @@ import {
   ArrowDownUp,
 } from "lucide-react";
 
+import { auth, db } from "../firebase";
+
 type MarketCoin = {
   id: string;
   symbol: string;
@@ -29,6 +33,7 @@ type PortfolioAsset = {
   symbol: string;
   name: string;
   amount: number;
+  locked?: number;
 };
 
 type TxStatus = "Pending" | "Completed" | "Failed";
@@ -50,15 +55,25 @@ type ShellContext = {
   globalSearch: string;
 };
 
-const portfolio: PortfolioAsset[] = [
-  { id: "bitcoin", symbol: "BTC", name: "Bitcoin", amount: 0.2458 },
-  { id: "ethereum", symbol: "ETH", name: "Ethereum", amount: 2.86 },
-  { id: "tether", symbol: "USDT", name: "Tether", amount: 5400 },
-  { id: "solana", symbol: "SOL", name: "Solana", amount: 22.5 },
-  { id: "binancecoin", symbol: "BNB", name: "BNB", amount: 5.1 },
+type UserWalletData = {
+  balances?: Record<string, number | string>;
+  lockedBalances?: Record<string, number | string>;
+};
+
+const ASSET_META = [
+  { id: "bitcoin", symbol: "BTC", name: "Bitcoin" },
+  { id: "ethereum", symbol: "ETH", name: "Ethereum" },
+  { id: "tether", symbol: "USDT", name: "Tether" },
+  { id: "solana", symbol: "SOL", name: "Solana" },
+  { id: "binancecoin", symbol: "BNB", name: "BNB" },
 ];
 
 const COLORS = ["#3B82F6", "#22D3EE", "#8B5CF6", "#10B981", "#F59E0B"];
+
+const toNumber = (value: unknown) => {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : 0;
+};
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -66,8 +81,13 @@ const Dashboard = () => {
 
   const [market, setMarket] = useState<MarketCoin[]>([]);
   const [loadingMarket, setLoadingMarket] = useState(true);
+  const [loadingWallets, setLoadingWallets] = useState(true);
   const [copiedTxId, setCopiedTxId] = useState("");
   const [toast, setToast] = useState("");
+  const [walletSource, setWalletSource] = useState<UserWalletData>({
+    balances: {},
+    lockedBalances: {},
+  });
 
   useEffect(() => {
     const fetchMarket = async () => {
@@ -105,6 +125,48 @@ const Dashboard = () => {
   }, []);
 
   useEffect(() => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
+      if (!firebaseUser) {
+        setWalletSource({
+          balances: {},
+          lockedBalances: {},
+        });
+        setLoadingWallets(false);
+        return;
+      }
+
+      setLoadingWallets(true);
+
+      const userRef = ref(db, `users/${firebaseUser.uid}`);
+      const unsubscribeValue = onValue(
+        userRef,
+        (snapshot) => {
+          const data = (snapshot.val() || {}) as UserWalletData;
+
+          setWalletSource({
+            balances: data.balances || {},
+            lockedBalances: data.lockedBalances || {},
+          });
+
+          setLoadingWallets(false);
+        },
+        (error) => {
+          console.error("Dashboard wallet data fetch error:", error);
+          setWalletSource({
+            balances: {},
+            lockedBalances: {},
+          });
+          setLoadingWallets(false);
+        }
+      );
+
+      return unsubscribeValue;
+    });
+
+    return () => unsubscribeAuth();
+  }, []);
+
+  useEffect(() => {
     if (!toast) return;
     const timer = setTimeout(() => setToast(""), 2200);
     return () => clearTimeout(timer);
@@ -117,25 +179,52 @@ const Dashboard = () => {
     }, {});
   }, [market]);
 
+  const portfolio: PortfolioAsset[] = useMemo(() => {
+    const balances = walletSource.balances || {};
+    const lockedBalances = walletSource.lockedBalances || {};
+
+    return ASSET_META.map((asset) => ({
+      id: asset.id,
+      symbol: asset.symbol,
+      name: asset.name,
+      amount: toNumber(balances[asset.symbol]),
+      locked: toNumber(lockedBalances[asset.symbol]),
+    }));
+  }, [walletSource]);
+
   const assetRows = useMemo(() => {
     return portfolio.map((asset) => {
       const coin = marketMap[asset.id];
       const currentPrice = coin?.current_price ?? 0;
       const totalValue = currentPrice * asset.amount;
+      const lockedValue = (asset.locked || 0) * currentPrice;
+      const available = Math.max(asset.amount - (asset.locked || 0), 0);
+      const availableValue = available * currentPrice;
 
       return {
         ...asset,
         image: coin?.image || "",
         currentPrice,
         totalValue,
+        lockedValue,
+        available,
+        availableValue,
         priceChange: coin?.price_change_percentage_24h ?? 0,
       };
     });
-  }, [marketMap]);
+  }, [portfolio, marketMap]);
 
   const totalAssets = useMemo(() => {
     return assetRows.reduce((sum, asset) => sum + asset.totalValue, 0);
   }, [assetRows]);
+
+  const totalLocked = useMemo(() => {
+    return assetRows.reduce((sum, asset) => sum + asset.lockedValue, 0);
+  }, [assetRows]);
+
+  const totalAvailable = useMemo(() => {
+    return Math.max(totalAssets - totalLocked, 0);
+  }, [totalAssets, totalLocked]);
 
   const total24hChangeValue = useMemo(() => {
     return assetRows.reduce((sum, asset) => {
@@ -305,6 +394,8 @@ const Dashboard = () => {
     return <ArrowUpRight className="h-4 w-4 text-sky-400" />;
   };
 
+  const isLoading = loadingMarket || loadingWallets;
+
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8">
       {toast && (
@@ -352,17 +443,19 @@ const Dashboard = () => {
             <div className="grid w-full grid-cols-2 gap-3 sm:gap-4 lg:max-w-sm">
               <div className="rounded-3xl bg-white/8 p-4 ring-1 ring-white/10">
                 <div className="text-xs uppercase tracking-[0.15em] text-slate-400">
-                  24H P/L
+                  Available
                 </div>
                 <div className="mt-2 text-lg font-semibold tabular-nums">
-                  {showBalance ? formatMoney(total24hChangeValue) : "••••••"}
+                  {showBalance ? formatMoney(totalAvailable) : "••••••"}
                 </div>
               </div>
               <div className="rounded-3xl bg-white/8 p-4 ring-1 ring-white/10">
                 <div className="text-xs uppercase tracking-[0.15em] text-slate-400">
-                  Assets
+                  Locked
                 </div>
-                <div className="mt-2 text-lg font-semibold">{assetRows.length}</div>
+                <div className="mt-2 text-lg font-semibold tabular-nums">
+                  {showBalance ? formatMoney(totalLocked) : "••••••"}
+                </div>
               </div>
             </div>
           </div>
@@ -456,18 +549,81 @@ const Dashboard = () => {
               <div className="mt-1 text-lg font-semibold">Portfolio breakdown</div>
             </div>
 
-            <div className="rounded-[28px] bg-white/5 p-5 ring-1 ring-white/10">
-              <div className="space-y-4">
-                {allocationData.map((asset) => (
-                  <div key={asset.id}>
-                    <div className="mb-2 flex items-center justify-between gap-3">
+            {isLoading ? (
+              <div className="rounded-[28px] bg-white/5 p-6 text-sm text-slate-400 ring-1 ring-white/10">
+                Loading allocation data...
+              </div>
+            ) : (
+              <>
+                <div className="rounded-[28px] bg-white/5 p-5 ring-1 ring-white/10">
+                  <div className="space-y-4">
+                    {allocationData.map((asset) => (
+                      <div key={asset.id}>
+                        <div className="mb-2 flex items-center justify-between gap-3">
+                          <div className="flex min-w-0 items-center gap-3">
+                            <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-2xl bg-white/10 ring-1 ring-white/10">
+                              {asset.image ? (
+                                <img
+                                  src={asset.image}
+                                  alt={asset.name}
+                                  className="h-6 w-6 object-contain"
+                                />
+                              ) : (
+                                <span className="text-xs font-bold">{asset.symbol}</span>
+                              )}
+                            </div>
+
+                            <div className="min-w-0">
+                              <div className="font-medium">{asset.name}</div>
+                              <div className="text-xs text-slate-400">
+                                {asset.symbol} • {formatCoinAmount(asset.amount)}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="text-right">
+                            <div className="text-sm font-semibold tabular-nums">
+                              {showBalance ? formatMoney(asset.totalValue) : "••••••"}
+                            </div>
+                            <div className="text-xs text-slate-400">
+                              {asset.percent.toFixed(1)}%
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="h-3 w-full overflow-hidden rounded-full bg-white/8">
+                          <div
+                            className="h-full rounded-full transition-all duration-500"
+                            style={{
+                              width: `${Math.max(asset.percent, 4)}%`,
+                              background: `linear-gradient(90deg, ${asset.color}, ${asset.color}CC)`,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  {assetRows.map((asset, index) => (
+                    <div
+                      key={asset.id}
+                      className="flex flex-wrap items-center justify-between gap-4 rounded-3xl bg-white/5 p-4 ring-1 ring-white/8"
+                    >
                       <div className="flex min-w-0 items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-2xl bg-white/10 ring-1 ring-white/10">
+                        <div
+                          className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-2xl ring-1 ring-white/10"
+                          style={{
+                            background:
+                              "linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03))",
+                          }}
+                        >
                           {asset.image ? (
                             <img
                               src={asset.image}
                               alt={asset.name}
-                              className="h-6 w-6 object-contain"
+                              className="h-7 w-7 object-contain"
                             />
                           ) : (
                             <span className="text-xs font-bold">{asset.symbol}</span>
@@ -475,99 +631,44 @@ const Dashboard = () => {
                         </div>
 
                         <div className="min-w-0">
-                          <div className="font-medium">{asset.name}</div>
-                          <div className="text-xs text-slate-400">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">{asset.name}</span>
+                            <span
+                              className="h-2.5 w-2.5 rounded-full"
+                              style={{
+                                backgroundColor: COLORS[index % COLORS.length],
+                              }}
+                            />
+                          </div>
+                          <div className="text-sm text-slate-400">
                             {asset.symbol} • {formatCoinAmount(asset.amount)}
                           </div>
                         </div>
                       </div>
 
-                      <div className="text-right">
-                        <div className="text-sm font-semibold tabular-nums">
-                          {showBalance ? formatMoney(asset.totalValue) : "••••••"}
+                      <div className="grid min-w-[200px] grid-cols-2 gap-4 sm:min-w-[300px]">
+                        <div className="text-right">
+                          <div className="text-xs uppercase tracking-[0.14em] text-slate-500">
+                            Price
+                          </div>
+                          <div className="mt-1 text-sm font-medium tabular-nums">
+                            {showBalance ? formatMoney(asset.currentPrice) : "••••••"}
+                          </div>
                         </div>
-                        <div className="text-xs text-slate-400">
-                          {asset.percent.toFixed(1)}%
+                        <div className="text-right">
+                          <div className="text-xs uppercase tracking-[0.14em] text-slate-500">
+                            Value
+                          </div>
+                          <div className="mt-1 text-sm font-semibold tabular-nums">
+                            {showBalance ? formatMoney(asset.totalValue) : "••••••"}
+                          </div>
                         </div>
                       </div>
                     </div>
-
-                    <div className="h-3 w-full overflow-hidden rounded-full bg-white/8">
-                      <div
-                        className="h-full rounded-full transition-all duration-500"
-                        style={{
-                          width: `${Math.max(asset.percent, 4)}%`,
-                          background: `linear-gradient(90deg, ${asset.color}, ${asset.color}CC)`,
-                        }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              {assetRows.map((asset, index) => (
-                <div
-                  key={asset.id}
-                  className="flex flex-wrap items-center justify-between gap-4 rounded-3xl bg-white/5 p-4 ring-1 ring-white/8"
-                >
-                  <div className="flex min-w-0 items-center gap-3">
-                    <div
-                      className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-2xl ring-1 ring-white/10"
-                      style={{
-                        background:
-                          "linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03))",
-                      }}
-                    >
-                      {asset.image ? (
-                        <img
-                          src={asset.image}
-                          alt={asset.name}
-                          className="h-7 w-7 object-contain"
-                        />
-                      ) : (
-                        <span className="text-xs font-bold">{asset.symbol}</span>
-                      )}
-                    </div>
-
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">{asset.name}</span>
-                        <span
-                          className="h-2.5 w-2.5 rounded-full"
-                          style={{
-                            backgroundColor: COLORS[index % COLORS.length],
-                          }}
-                        />
-                      </div>
-                      <div className="text-sm text-slate-400">
-                        {asset.symbol} • {formatCoinAmount(asset.amount)}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid min-w-[200px] grid-cols-2 gap-4 sm:min-w-[300px]">
-                    <div className="text-right">
-                      <div className="text-xs uppercase tracking-[0.14em] text-slate-500">
-                        Price
-                      </div>
-                      <div className="mt-1 text-sm font-medium tabular-nums">
-                        {showBalance ? formatMoney(asset.currentPrice) : "••••••"}
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-xs uppercase tracking-[0.14em] text-slate-500">
-                        Value
-                      </div>
-                      <div className="mt-1 text-sm font-semibold tabular-nums">
-                        {showBalance ? formatMoney(asset.totalValue) : "••••••"}
-                      </div>
-                    </div>
-                  </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </>
+            )}
           </div>
         </section>
 
