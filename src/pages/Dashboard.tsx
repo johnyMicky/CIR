@@ -1,16 +1,18 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useOutletContext } from "react-router-dom";
+import { useNavigate, useOutletContext } from "react-router-dom";
 import {
   ArrowDownLeft,
   ArrowUpRight,
   Copy,
   CheckCircle2,
-  CreditCard,
   Send,
   TrendingUp,
   TrendingDown,
-  ChevronDown,
-  X,
+  ChevronRight,
+  Wallet,
+  History,
+  RefreshCw,
+  ArrowDownUp,
 } from "lucide-react";
 
 type MarketCoin = {
@@ -42,8 +44,6 @@ type Transaction = {
   date: string;
 };
 
-type ModalType = "deposit" | "withdraw" | "transfer" | null;
-
 type ShellContext = {
   showBalance: boolean;
   setShowBalance: React.Dispatch<React.SetStateAction<boolean>>;
@@ -61,18 +61,13 @@ const portfolio: PortfolioAsset[] = [
 const COLORS = ["#3B82F6", "#22D3EE", "#8B5CF6", "#10B981", "#F59E0B"];
 
 const Dashboard = () => {
+  const navigate = useNavigate();
   const { showBalance, globalSearch } = useOutletContext<ShellContext>();
 
   const [market, setMarket] = useState<MarketCoin[]>([]);
   const [loadingMarket, setLoadingMarket] = useState(true);
-  const [modalType, setModalType] = useState<ModalType>(null);
   const [copiedTxId, setCopiedTxId] = useState("");
   const [toast, setToast] = useState("");
-
-  const [formAsset, setFormAsset] = useState("BTC");
-  const [formAmount, setFormAmount] = useState("");
-  const [formAddress, setFormAddress] = useState("");
-  const [formTransferUser, setFormTransferUser] = useState("");
 
   useEffect(() => {
     const fetchMarket = async () => {
@@ -251,51 +246,6 @@ const Dashboard = () => {
       maximumFractionDigits: value < 1 ? 6 : 2,
     }).format(value);
 
-  const resetModalFields = () => {
-    setFormAsset("BTC");
-    setFormAmount("");
-    setFormAddress("");
-    setFormTransferUser("");
-  };
-
-  const openModal = (type: ModalType) => {
-    resetModalFields();
-    setModalType(type);
-  };
-
-  const closeModal = () => {
-    setModalType(null);
-    resetModalFields();
-  };
-
-  const submitAction = () => {
-    if (!modalType) return;
-
-    if (!formAmount) {
-      setToast("Enter amount");
-      return;
-    }
-
-    if (modalType === "withdraw" && !formAddress) {
-      setToast("Enter wallet address");
-      return;
-    }
-
-    if (modalType === "transfer" && !formTransferUser) {
-      setToast("Fill all transfer fields");
-      return;
-    }
-
-    const labelMap: Record<Exclude<ModalType, null>, string> = {
-      deposit: "Deposit request submitted",
-      withdraw: "Withdraw request submitted",
-      transfer: "Transfer request submitted",
-    };
-
-    setToast(labelMap[modalType]);
-    closeModal();
-  };
-
   const handleExport = () => {
     const rows = [
       ["Type", "Asset", "Amount", "USD Value", "Status", "Date", "Transaction ID"],
@@ -355,114 +305,11 @@ const Dashboard = () => {
     return <ArrowUpRight className="h-4 w-4 text-sky-400" />;
   };
 
-  const renderModalTitle = () => {
-    if (modalType === "deposit") return "Deposit";
-    if (modalType === "withdraw") return "Withdraw";
-    if (modalType === "transfer") return "Transfer";
-    return "";
-  };
-
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8">
       {toast && (
         <div className="fixed right-4 top-24 z-[100] rounded-2xl border border-cyan-400/20 bg-[#0F1B33]/95 px-4 py-3 text-sm text-cyan-100 shadow-2xl backdrop-blur-xl">
           {toast}
-        </div>
-      )}
-
-      {modalType && (
-        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-[28px] border border-white/10 bg-[#0D1830] p-5 shadow-2xl">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-sm uppercase tracking-[0.18em] text-slate-400">
-                  Action
-                </div>
-                <div className="mt-1 text-xl font-semibold">{renderModalTitle()}</div>
-              </div>
-              <button
-                onClick={closeModal}
-                className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            <div className="mt-6 space-y-4">
-              <div>
-                <label className="mb-2 block text-sm text-slate-300">Asset</label>
-                <select
-                  value={formAsset}
-                  onChange={(e) => setFormAsset(e.target.value)}
-                  className="h-12 w-full rounded-2xl border border-white/10 bg-white/5 px-4 text-sm outline-none focus:border-cyan-400/40"
-                >
-                  <option value="BTC" className="bg-slate-900">BTC</option>
-                  <option value="ETH" className="bg-slate-900">ETH</option>
-                  <option value="USDT" className="bg-slate-900">USDT</option>
-                  <option value="SOL" className="bg-slate-900">SOL</option>
-                  <option value="BNB" className="bg-slate-900">BNB</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm text-slate-300">Amount</label>
-                <input
-                  value={formAmount}
-                  onChange={(e) => setFormAmount(e.target.value)}
-                  placeholder="Enter amount"
-                  className="h-12 w-full rounded-2xl border border-white/10 bg-white/5 px-4 text-sm outline-none placeholder:text-slate-500 focus:border-cyan-400/40"
-                />
-              </div>
-
-              {modalType === "deposit" && (
-                <div className="rounded-3xl border border-cyan-400/10 bg-cyan-500/5 p-4">
-                  <div className="text-sm text-slate-300">Deposit wallet address</div>
-                  <div className="mt-2 rounded-2xl bg-white/5 px-3 py-3 text-sm text-amber-200">
-                    Wallet address is being assigned by administrator
-                  </div>
-                </div>
-              )}
-
-              {modalType === "withdraw" && (
-                <div>
-                  <label className="mb-2 block text-sm text-slate-300">Wallet Address</label>
-                  <input
-                    value={formAddress}
-                    onChange={(e) => setFormAddress(e.target.value)}
-                    placeholder="Recipient wallet address"
-                    className="h-12 w-full rounded-2xl border border-white/10 bg-white/5 px-4 text-sm outline-none placeholder:text-slate-500 focus:border-cyan-400/40"
-                  />
-                </div>
-              )}
-
-              {modalType === "transfer" && (
-                <div>
-                  <label className="mb-2 block text-sm text-slate-300">Recipient Username / Email</label>
-                  <input
-                    value={formTransferUser}
-                    onChange={(e) => setFormTransferUser(e.target.value)}
-                    placeholder="Enter user email or username"
-                    className="h-12 w-full rounded-2xl border border-white/10 bg-white/5 px-4 text-sm outline-none placeholder:text-slate-500 focus:border-cyan-400/40"
-                  />
-                </div>
-              )}
-            </div>
-
-            <div className="mt-6 flex items-center justify-end gap-3">
-              <button
-                onClick={closeModal}
-                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-200 hover:bg-white/10"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={submitAction}
-                className="rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 px-5 py-3 text-sm font-medium text-white shadow-[0_0_25px_rgba(34,211,238,0.25)] hover:opacity-95"
-              >
-                Submit
-              </button>
-            </div>
-          </div>
         </div>
       )}
 
@@ -527,29 +374,35 @@ const Dashboard = () => {
               <div className="text-sm font-medium uppercase tracking-[0.18em] text-slate-400">
                 Quick Actions
               </div>
-              <div className="mt-1 text-lg font-semibold">Move funds faster</div>
+              <div className="mt-1 text-lg font-semibold">Open wallet operations</div>
             </div>
           </div>
 
-          <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div className="mt-6 grid grid-cols-2 gap-4">
             {[
               {
                 label: "Deposit",
                 icon: ArrowDownLeft,
                 cls: "from-emerald-500/25 to-cyan-500/15 text-emerald-300",
-                onClick: () => openModal("deposit"),
+                onClick: () => navigate("/send-receive"),
               },
               {
                 label: "Withdraw",
                 icon: ArrowUpRight,
                 cls: "from-rose-500/25 to-orange-500/15 text-orange-300",
-                onClick: () => openModal("withdraw"),
+                onClick: () => navigate("/send-receive"),
               },
               {
                 label: "Transfer",
                 icon: Send,
                 cls: "from-blue-500/25 to-cyan-500/15 text-sky-300",
-                onClick: () => openModal("transfer"),
+                onClick: () => navigate("/send-receive"),
+              },
+              {
+                label: "Swap",
+                icon: ArrowDownUp,
+                cls: "from-violet-500/25 to-fuchsia-500/15 text-violet-300",
+                onClick: () => navigate("/exchange"),
               },
             ].map((action) => {
               const Icon = action.icon;
@@ -563,7 +416,7 @@ const Dashboard = () => {
                     <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10">
                       <Icon className="h-5 w-5" />
                     </div>
-                    <ChevronDown className="h-4 w-4 rotate-[-90deg] opacity-50 transition group-hover:translate-x-1" />
+                    <ChevronRight className="h-4 w-4 opacity-50 transition group-hover:translate-x-1" />
                   </div>
                   <div className="mt-6 text-sm font-semibold sm:text-base">
                     {action.label}
@@ -571,6 +424,24 @@ const Dashboard = () => {
                 </button>
               );
             })}
+          </div>
+
+          <div className="mt-4 grid grid-cols-2 gap-4">
+            <button
+              onClick={() => navigate("/my-wallets")}
+              className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 text-sm text-slate-200 hover:bg-white/10"
+            >
+              <Wallet className="h-4 w-4" />
+              My Wallets
+            </button>
+
+            <button
+              onClick={() => navigate("/history")}
+              className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 text-sm text-slate-200 hover:bg-white/10"
+            >
+              <History className="h-4 w-4" />
+              Full History
+            </button>
           </div>
         </section>
       </div>
@@ -713,7 +584,8 @@ const Dashboard = () => {
               onClick={() => setToast("Market refresh is automatic")}
               className="rounded-full bg-cyan-500/10 px-3 py-1 text-xs text-cyan-300 ring-1 ring-cyan-400/20"
             >
-              Auto refresh
+              <RefreshCw className="inline h-3.5 w-3.5 mr-1" />
+              Auto
             </button>
           </div>
 
@@ -774,13 +646,23 @@ const Dashboard = () => {
             <div className="mt-1 text-lg font-semibold">Latest activity</div>
           </div>
 
-          <button
-            onClick={handleExport}
-            className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-200 hover:bg-white/10"
-          >
-            <Copy className="h-4 w-4" />
-            Export
-          </button>
+          <div className="flex flex-wrap gap-3">
+            <button
+              onClick={() => navigate("/history")}
+              className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-200 hover:bg-white/10"
+            >
+              <History className="h-4 w-4" />
+              View All
+            </button>
+
+            <button
+              onClick={handleExport}
+              className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-200 hover:bg-white/10"
+            >
+              <Copy className="h-4 w-4" />
+              Export
+            </button>
+          </div>
         </div>
 
         <div className="mt-6 overflow-x-auto">
