@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useOutletContext } from "react-router-dom";
+import { onAuthStateChanged } from "firebase/auth";
+import { onValue, push, ref, set } from "firebase/database";
 import {
   ArrowDownLeft,
   ArrowUpRight,
@@ -10,6 +12,8 @@ import {
   CheckCircle2,
   RefreshCw,
 } from "lucide-react";
+
+import { auth, db } from "../firebase";
 
 type MarketCoin = {
   id: string;
@@ -37,56 +41,42 @@ type ShellContext = {
 
 type ActionTab = "receive" | "send" | "transfer";
 
-const portfolio: PortfolioAsset[] = [
-  {
-    id: "bitcoin",
-    symbol: "BTC",
-    name: "Bitcoin",
-    amount: 0.2458,
-    locked: 0.012,
-    walletAddress: "",
-  },
-  {
-    id: "ethereum",
-    symbol: "ETH",
-    name: "Ethereum",
-    amount: 2.86,
-    locked: 0.2,
-    walletAddress: "0xAxcE1ciETH7eF53b2d12AA91fABC1234567890EF",
-  },
-  {
-    id: "tether",
-    symbol: "USDT",
-    name: "Tether",
-    amount: 5400,
-    locked: 350,
-    walletAddress: "",
-  },
-  {
-    id: "solana",
-    symbol: "SOL",
-    name: "Solana",
-    amount: 22.5,
-    locked: 1.1,
-    walletAddress: "7RxAxcelciSo1aNa9mL3Q8pQ2r2m4X1aBcDeFgHiJkL",
-  },
-  {
-    id: "binancecoin",
-    symbol: "BNB",
-    name: "BNB",
-    amount: 5.1,
-    locked: 0.4,
-    walletAddress: "",
-  },
+type UserWalletData = {
+  wallets?: Record<string, number | string>;
+  btc_balance?: number | string;
+  eth_balance?: number | string;
+  usdt_balance?: number | string;
+  btc_address?: string;
+  eth_address?: string;
+  usdt_address?: string;
+  email?: string;
+  username?: string;
+  name?: string;
+  firstName?: string;
+  lastName?: string;
+};
+
+const ASSET_META = [
+  { id: "bitcoin", symbol: "BTC", name: "Bitcoin" },
+  { id: "ethereum", symbol: "ETH", name: "Ethereum" },
+  { id: "tether", symbol: "USDT", name: "Tether" },
 ];
+
+const toNumber = (value: unknown) => {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : 0;
+};
 
 const SendReceive = () => {
   const { showBalance, globalSearch } = useOutletContext<ShellContext>();
 
   const [market, setMarket] = useState<MarketCoin[]>([]);
   const [loadingMarket, setLoadingMarket] = useState(true);
+  const [loadingWallets, setLoadingWallets] = useState(true);
   const [toast, setToast] = useState("");
   const [activeTab, setActiveTab] = useState<ActionTab>("receive");
+  const [userId, setUserId] = useState<string>("");
+  const [userData, setUserData] = useState<UserWalletData>({});
 
   const [selectedAsset, setSelectedAsset] = useState("BTC");
   const [sendAmount, setSendAmount] = useState("");
@@ -100,14 +90,7 @@ const SendReceive = () => {
       try {
         setLoadingMarket(true);
 
-        const ids = [
-          "bitcoin",
-          "ethereum",
-          "tether",
-          "solana",
-          "binancecoin",
-          "ripple",
-        ].join(",");
+        const ids = ["bitcoin", "ethereum", "tether"].join(",");
 
         const res = await fetch(
           `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${ids}&order=market_cap_desc&per_page=10&page=1&sparkline=false&price_change_percentage=24h`
@@ -130,6 +113,39 @@ const SendReceive = () => {
   }, []);
 
   useEffect(() => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
+      if (!firebaseUser) {
+        setUserId("");
+        setUserData({});
+        setLoadingWallets(false);
+        return;
+      }
+
+      setUserId(firebaseUser.uid);
+      setLoadingWallets(true);
+
+      const userRef = ref(db, `users/${firebaseUser.uid}`);
+      const unsubscribeValue = onValue(
+        userRef,
+        (snapshot) => {
+          const data = (snapshot.val() || {}) as UserWalletData;
+          setUserData(data || {});
+          setLoadingWallets(false);
+        },
+        (error) => {
+          console.error("SendReceive wallet data fetch error:", error);
+          setUserData({});
+          setLoadingWallets(false);
+        }
+      );
+
+      return unsubscribeValue;
+    });
+
+    return () => unsubscribeAuth();
+  }, []);
+
+  useEffect(() => {
     if (!toast) return;
     const timer = setTimeout(() => setToast(""), 2200);
     return () => clearTimeout(timer);
@@ -141,6 +157,39 @@ const SendReceive = () => {
       return acc;
     }, {});
   }, [market]);
+
+  const portfolio: PortfolioAsset[] = useMemo(() => {
+    const wallets = userData.wallets || {};
+
+    return ASSET_META.map((asset) => {
+      let amount = 0;
+      let walletAddress = "";
+
+      if (asset.symbol === "BTC") {
+        amount = toNumber(wallets.BTC ?? userData.btc_balance);
+        walletAddress = userData.btc_address || "";
+      }
+
+      if (asset.symbol === "ETH") {
+        amount = toNumber(wallets.ETH ?? userData.eth_balance);
+        walletAddress = userData.eth_address || "";
+      }
+
+      if (asset.symbol === "USDT") {
+        amount = toNumber(wallets.USDT ?? userData.usdt_balance);
+        walletAddress = userData.usdt_address || "";
+      }
+
+      return {
+        id: asset.id,
+        symbol: asset.symbol,
+        name: asset.name,
+        amount,
+        locked: 0,
+        walletAddress,
+      };
+    });
+  }, [userData]);
 
   const walletRows = useMemo(() => {
     return portfolio.map((asset) => {
@@ -158,7 +207,7 @@ const SendReceive = () => {
         priceChange: coin?.price_change_percentage_24h ?? 0,
       };
     });
-  }, [marketMap]);
+  }, [portfolio, marketMap]);
 
   const filteredWallets = useMemo(() => {
     const q = globalSearch.trim().toLowerCase();
@@ -216,34 +265,158 @@ const SendReceive = () => {
     }
   };
 
-  const handleSend = () => {
-    if (!sendAmount) {
+  const buildUserDisplayName = () => {
+    if (userData.name) return userData.name;
+    const full = `${userData.firstName || ""} ${userData.lastName || ""}`.trim();
+    if (full) return full;
+    if (userData.username) return userData.username;
+    if (userData.email) return userData.email;
+    return "Client";
+  };
+
+  const createTransaction = async (payload: {
+    type: "deposit" | "withdraw" | "transfer";
+    asset: string;
+    amount: number;
+    walletAddress?: string;
+    recipient?: string;
+    note?: string;
+  }) => {
+    if (!userId) {
+      setToast("User session not found");
+      return false;
+    }
+
+    try {
+      const txRef = push(ref(db, `transactions/${userId}`));
+
+      await set(txRef, {
+        id: txRef.key,
+        userId,
+        userName: buildUserDisplayName(),
+        userEmail: userData.email || "",
+        type: payload.type,
+        asset: payload.asset,
+        amount: payload.amount,
+        walletAddress: payload.walletAddress || "",
+        recipient: payload.recipient || "",
+        note: payload.note || "",
+        status: "Pending",
+        createdAt: Date.now(),
+        createdAtLabel: new Date().toLocaleString(),
+      });
+
+      return true;
+    } catch (error) {
+      console.error("Transaction write error:", error);
+      setToast("Failed to submit request");
+      return false;
+    }
+  };
+
+  const handleDepositRequest = async () => {
+    if (!selectedWallet) {
+      setToast("Select asset");
+      return;
+    }
+
+    const parsedAmount = Number(sendAmount || "0");
+    if (!parsedAmount || parsedAmount <= 0) {
+      setToast("Enter deposit amount");
+      return;
+    }
+
+    const ok = await createTransaction({
+      type: "deposit",
+      asset: selectedWallet.symbol,
+      amount: parsedAmount,
+      walletAddress: selectedWallet.walletAddress || "",
+      note,
+    });
+
+    if (ok) {
+      setToast("Deposit request submitted");
+      setSendAmount("");
+      setNote("");
+    }
+  };
+
+  const handleSend = async () => {
+    if (!selectedWallet) {
+      setToast("Select asset");
+      return;
+    }
+
+    const parsedAmount = Number(sendAmount || "0");
+
+    if (!parsedAmount || parsedAmount <= 0) {
       setToast("Enter amount");
       return;
     }
-    if (!sendAddress) {
+
+    if (!sendAddress.trim()) {
       setToast("Enter destination wallet address");
       return;
     }
-    setToast("Withdraw request submitted");
-    setSendAmount("");
-    setSendAddress("");
-    setNote("");
+
+    if (parsedAmount > selectedWallet.available) {
+      setToast("Insufficient available balance");
+      return;
+    }
+
+    const ok = await createTransaction({
+      type: "withdraw",
+      asset: selectedWallet.symbol,
+      amount: parsedAmount,
+      walletAddress: sendAddress.trim(),
+      note,
+    });
+
+    if (ok) {
+      setToast("Withdraw request submitted");
+      setSendAmount("");
+      setSendAddress("");
+      setNote("");
+    }
   };
 
-  const handleTransfer = () => {
-    if (!transferAmount) {
+  const handleTransfer = async () => {
+    if (!selectedWallet) {
+      setToast("Select asset");
+      return;
+    }
+
+    const parsedAmount = Number(transferAmount || "0");
+
+    if (!parsedAmount || parsedAmount <= 0) {
       setToast("Enter transfer amount");
       return;
     }
-    if (!transferRecipient) {
+
+    if (!transferRecipient.trim()) {
       setToast("Enter recipient username or email");
       return;
     }
-    setToast("Internal transfer request submitted");
-    setTransferAmount("");
-    setTransferRecipient("");
-    setNote("");
+
+    if (parsedAmount > selectedWallet.available) {
+      setToast("Insufficient available balance");
+      return;
+    }
+
+    const ok = await createTransaction({
+      type: "transfer",
+      asset: selectedWallet.symbol,
+      amount: parsedAmount,
+      recipient: transferRecipient.trim(),
+      note,
+    });
+
+    if (ok) {
+      setToast("Internal transfer request submitted");
+      setTransferAmount("");
+      setTransferRecipient("");
+      setNote("");
+    }
   };
 
   const quickStats = useMemo(() => {
@@ -257,6 +430,8 @@ const SendReceive = () => {
       value: selectedWallet.totalValue,
     };
   }, [selectedWallet]);
+
+  const isLoading = loadingMarket || loadingWallets;
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8">
@@ -454,6 +629,38 @@ const SendReceive = () => {
                         Wallet address is being assigned by administrator
                       </div>
                     )}
+                  </div>
+
+                  <div className="mt-5 grid grid-cols-1 gap-4">
+                    <div>
+                      <label className="mb-2 block text-sm text-slate-300">Expected Amount</label>
+                      <input
+                        value={sendAmount}
+                        onChange={(e) => setSendAmount(e.target.value)}
+                        placeholder={`Enter ${selectedWallet.symbol} deposit amount`}
+                        className="h-12 w-full rounded-2xl border border-white/10 bg-white/5 px-4 text-sm outline-none placeholder:text-slate-500 focus:border-cyan-400/40"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="mb-2 block text-sm text-slate-300">Note</label>
+                      <input
+                        value={note}
+                        onChange={(e) => setNote(e.target.value)}
+                        placeholder="Optional deposit note"
+                        className="h-12 w-full rounded-2xl border border-white/10 bg-white/5 px-4 text-sm outline-none placeholder:text-slate-500 focus:border-cyan-400/40"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-5 flex flex-wrap gap-3">
+                    <button
+                      onClick={handleDepositRequest}
+                      className="inline-flex h-12 items-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-400 to-cyan-500 px-5 text-sm font-medium text-white shadow-[0_0_25px_rgba(16,185,129,0.18)] hover:opacity-95"
+                    >
+                      <ArrowDownLeft className="h-4 w-4" />
+                      Submit Deposit Request
+                    </button>
                   </div>
                 </div>
               )}
@@ -721,7 +928,7 @@ const SendReceive = () => {
         </div>
         <div className="mt-1 text-lg font-semibold">Choose an asset for sending or receiving</div>
 
-        {loadingMarket && market.length === 0 ? (
+        {isLoading ? (
           <div className="mt-6 rounded-3xl bg-white/5 p-6 text-sm text-slate-400">
             Loading asset data...
           </div>
