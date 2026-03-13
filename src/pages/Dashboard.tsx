@@ -56,19 +56,19 @@ type ShellContext = {
 };
 
 type UserWalletData = {
-  balances?: Record<string, number | string>;
-  lockedBalances?: Record<string, number | string>;
+  wallets?: Record<string, number | string>;
+  btc_balance?: number | string;
+  eth_balance?: number | string;
+  usdt_balance?: number | string;
 };
 
 const ASSET_META = [
   { id: "bitcoin", symbol: "BTC", name: "Bitcoin" },
   { id: "ethereum", symbol: "ETH", name: "Ethereum" },
   { id: "tether", symbol: "USDT", name: "Tether" },
-  { id: "solana", symbol: "SOL", name: "Solana" },
-  { id: "binancecoin", symbol: "BNB", name: "BNB" },
 ];
 
-const COLORS = ["#3B82F6", "#22D3EE", "#8B5CF6", "#10B981", "#F59E0B"];
+const COLORS = ["#F7931A", "#627EEA", "#26A17B"];
 
 const toNumber = (value: unknown) => {
   const num = Number(value);
@@ -84,24 +84,14 @@ const Dashboard = () => {
   const [loadingWallets, setLoadingWallets] = useState(true);
   const [copiedTxId, setCopiedTxId] = useState("");
   const [toast, setToast] = useState("");
-  const [walletSource, setWalletSource] = useState<UserWalletData>({
-    balances: {},
-    lockedBalances: {},
-  });
+  const [walletSource, setWalletSource] = useState<UserWalletData>({});
 
   useEffect(() => {
     const fetchMarket = async () => {
       try {
         setLoadingMarket(true);
 
-        const ids = [
-          "bitcoin",
-          "ethereum",
-          "tether",
-          "solana",
-          "binancecoin",
-          "ripple",
-        ].join(",");
+        const ids = ["bitcoin", "ethereum", "tether"].join(",");
 
         const res = await fetch(
           `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${ids}&order=market_cap_desc&per_page=10&page=1&sparkline=false&price_change_percentage=24h`
@@ -127,10 +117,7 @@ const Dashboard = () => {
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
       if (!firebaseUser) {
-        setWalletSource({
-          balances: {},
-          lockedBalances: {},
-        });
+        setWalletSource({});
         setLoadingWallets(false);
         return;
       }
@@ -142,20 +129,12 @@ const Dashboard = () => {
         userRef,
         (snapshot) => {
           const data = (snapshot.val() || {}) as UserWalletData;
-
-          setWalletSource({
-            balances: data.balances || {},
-            lockedBalances: data.lockedBalances || {},
-          });
-
+          setWalletSource(data || {});
           setLoadingWallets(false);
         },
         (error) => {
           console.error("Dashboard wallet data fetch error:", error);
-          setWalletSource({
-            balances: {},
-            lockedBalances: {},
-          });
+          setWalletSource({});
           setLoadingWallets(false);
         }
       );
@@ -180,16 +159,31 @@ const Dashboard = () => {
   }, [market]);
 
   const portfolio: PortfolioAsset[] = useMemo(() => {
-    const balances = walletSource.balances || {};
-    const lockedBalances = walletSource.lockedBalances || {};
+    const wallets = walletSource.wallets || {};
 
-    return ASSET_META.map((asset) => ({
-      id: asset.id,
-      symbol: asset.symbol,
-      name: asset.name,
-      amount: toNumber(balances[asset.symbol]),
-      locked: toNumber(lockedBalances[asset.symbol]),
-    }));
+    return ASSET_META.map((asset) => {
+      let amount = 0;
+
+      if (asset.symbol === "BTC") {
+        amount = toNumber(wallets.BTC ?? walletSource.btc_balance);
+      }
+
+      if (asset.symbol === "ETH") {
+        amount = toNumber(wallets.ETH ?? walletSource.eth_balance);
+      }
+
+      if (asset.symbol === "USDT") {
+        amount = toNumber(wallets.USDT ?? walletSource.usdt_balance);
+      }
+
+      return {
+        id: asset.id,
+        symbol: asset.symbol,
+        name: asset.name,
+        amount,
+        locked: 0,
+      };
+    });
   }, [walletSource]);
 
   const assetRows = useMemo(() => {
@@ -290,9 +284,9 @@ const Dashboard = () => {
       {
         id: "TX-20472",
         type: "Transfer",
-        asset: "SOL",
-        amount: 5,
-        usdValue: (marketMap["solana"]?.current_price || 0) * 5,
+        asset: "ETH",
+        amount: 1.25,
+        usdValue: (marketMap["ethereum"]?.current_price || 0) * 1.25,
         status: "Failed",
         date: "2026-03-13 14:08",
       },
