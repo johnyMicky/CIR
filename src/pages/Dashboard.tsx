@@ -22,13 +22,6 @@ import {
   Copy,
   CheckCircle2,
 } from "lucide-react";
-import {
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  Tooltip,
-} from "recharts";
 
 type MarketCoin = {
   id: string;
@@ -158,24 +151,33 @@ const Dashboard = () => {
     return assetRows.reduce((sum, asset) => {
       const pct = asset.priceChange || 0;
       const current = asset.totalValue;
-      const prev = pct === -100 ? current : current / (1 + pct / 100 || 1);
+      const divisor = 1 + pct / 100;
+      const prev = divisor !== 0 ? current / divisor : current;
       return sum + (current - prev);
     }, 0);
   }, [assetRows]);
 
   const total24hPercent = useMemo(() => {
-    if (totalAssets <= 0) return 0;
-    return (total24hChangeValue / (totalAssets - total24hChangeValue || 1)) * 100;
+    const base = totalAssets - total24hChangeValue;
+    if (base <= 0) return 0;
+    return (total24hChangeValue / base) * 100;
   }, [totalAssets, total24hChangeValue]);
 
-  const donutData = useMemo(() => {
-    return assetRows
-      .filter((a) => a.totalValue > 0)
-      .map((a) => ({
-        name: a.symbol,
-        value: Number(a.totalValue.toFixed(2)),
+  const allocationData = useMemo(() => {
+    if (totalAssets <= 0) {
+      return assetRows.map((asset, index) => ({
+        ...asset,
+        percent: 0,
+        color: COLORS[index % COLORS.length],
       }));
-  }, [assetRows]);
+    }
+
+    return assetRows.map((asset, index) => ({
+      ...asset,
+      percent: (asset.totalValue / totalAssets) * 100,
+      color: COLORS[index % COLORS.length],
+    }));
+  }, [assetRows, totalAssets]);
 
   const transactions: Transaction[] = useMemo(
     () => [
@@ -285,7 +287,6 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(34,211,238,0.12),_transparent_18%),radial-gradient(circle_at_right_top,_rgba(139,92,246,0.14),_transparent_22%),linear-gradient(180deg,#07111F_0%,#0A1427_45%,#0C1730_100%)] text-white">
       <div className="flex min-h-screen">
-        {/* Sidebar */}
         <aside className="hidden xl:flex w-72 shrink-0 flex-col border-r border-white/10 bg-[#0A1220]/80 backdrop-blur-xl">
           <div className="px-6 py-6 border-b border-white/10">
             <div className="flex items-center gap-3">
@@ -331,9 +332,7 @@ const Dashboard = () => {
           </div>
         </aside>
 
-        {/* Main */}
         <div className="flex-1 min-w-0">
-          {/* Header */}
           <header className="sticky top-0 z-40 border-b border-white/10 bg-[#081120]/75 backdrop-blur-xl">
             <div className="px-4 sm:px-6 lg:px-8">
               <div className="flex h-20 items-center gap-3 sm:gap-4">
@@ -416,9 +415,7 @@ const Dashboard = () => {
           </header>
 
           <main className="px-4 py-6 sm:px-6 lg:px-8">
-            {/* Top cards */}
             <div className="grid grid-cols-1 gap-6 2xl:grid-cols-[1.45fr_1fr]">
-              {/* Total Assets */}
               <section className="overflow-hidden rounded-[28px] border border-cyan-300/10 bg-[linear-gradient(135deg,rgba(59,130,246,0.16),rgba(34,211,238,0.10),rgba(139,92,246,0.14))] p-5 sm:p-6 lg:p-7 shadow-[0_20px_60px_rgba(0,0,0,0.28)]">
                 <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
                   <div className="min-w-0">
@@ -473,7 +470,6 @@ const Dashboard = () => {
                 </div>
               </section>
 
-              {/* Quick Actions */}
               <section className="rounded-[28px] border border-white/10 bg-white/5 p-5 sm:p-6 lg:p-7 backdrop-blur-xl shadow-[0_20px_60px_rgba(0,0,0,0.22)]">
                 <div className="flex items-center justify-between">
                   <div>
@@ -529,118 +525,131 @@ const Dashboard = () => {
               </section>
             </div>
 
-            {/* Middle */}
             <div className="mt-6 grid grid-cols-1 gap-6 2xl:grid-cols-[1.25fr_1fr]">
-              {/* Asset Allocation */}
               <section className="rounded-[28px] border border-white/10 bg-white/5 p-5 sm:p-6 lg:p-7 backdrop-blur-xl">
-                <div className="flex flex-col gap-6 xl:flex-row">
-                  <div className="xl:w-[320px]">
+                <div className="flex flex-col gap-6">
+                  <div>
                     <div className="text-sm font-medium uppercase tracking-[0.18em] text-slate-400">
                       Asset Allocation
                     </div>
                     <div className="mt-1 text-lg font-semibold">Portfolio breakdown</div>
-
-                    <div className="mt-6 h-[280px] w-full">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={donutData}
-                            dataKey="value"
-                            nameKey="name"
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={78}
-                            outerRadius={110}
-                            paddingAngle={3}
-                          >
-                            {donutData.map((_, index) => (
-                              <Cell key={index} fill={COLORS[index % COLORS.length]} />
-                            ))}
-                          </Pie>
-                          <Tooltip
-                            formatter={(value: number, name: string) => [
-                              formatMoney(value),
-                              name,
-                            ]}
-                            contentStyle={{
-                              background: "#0F1B33",
-                              border: "1px solid rgba(255,255,255,0.08)",
-                              borderRadius: 16,
-                            }}
-                          />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    </div>
                   </div>
 
-                  <div className="min-w-0 flex-1">
-                    <div className="space-y-3">
-                      {assetRows.map((asset, index) => (
-                        <div
-                          key={asset.id}
-                          className="flex flex-wrap items-center justify-between gap-4 rounded-3xl bg-white/5 p-4 ring-1 ring-white/8"
-                        >
-                          <div className="flex min-w-0 items-center gap-3">
-                            <div
-                              className="h-11 w-11 rounded-2xl ring-1 ring-white/10 flex items-center justify-center overflow-hidden"
-                              style={{
-                                background:
-                                  "linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03))",
-                              }}
-                            >
-                              {asset.image ? (
-                                <img
-                                  src={asset.image}
-                                  alt={asset.name}
-                                  className="h-7 w-7 object-contain"
-                                />
-                              ) : (
-                                <span className="text-xs font-bold">{asset.symbol}</span>
-                              )}
+                  <div className="rounded-[28px] bg-white/5 p-5 ring-1 ring-white/10">
+                    <div className="space-y-4">
+                      {allocationData.map((asset) => (
+                        <div key={asset.id}>
+                          <div className="mb-2 flex items-center justify-between gap-3">
+                            <div className="flex min-w-0 items-center gap-3">
+                              <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-2xl bg-white/10 ring-1 ring-white/10">
+                                {asset.image ? (
+                                  <img
+                                    src={asset.image}
+                                    alt={asset.name}
+                                    className="h-6 w-6 object-contain"
+                                  />
+                                ) : (
+                                  <span className="text-xs font-bold">{asset.symbol}</span>
+                                )}
+                              </div>
+
+                              <div className="min-w-0">
+                                <div className="font-medium">{asset.name}</div>
+                                <div className="text-xs text-slate-400">
+                                  {asset.symbol} • {formatCoinAmount(asset.amount)}
+                                </div>
+                              </div>
                             </div>
 
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium">{asset.name}</span>
-                                <span
-                                  className="h-2.5 w-2.5 rounded-full"
-                                  style={{
-                                    backgroundColor: COLORS[index % COLORS.length],
-                                  }}
-                                />
+                            <div className="text-right">
+                              <div className="text-sm font-semibold tabular-nums">
+                                {showBalance ? formatMoney(asset.totalValue) : "••••••"}
                               </div>
-                              <div className="text-sm text-slate-400">
-                                {asset.symbol} • {formatCoinAmount(asset.amount)}
+                              <div className="text-xs text-slate-400">
+                                {asset.percent.toFixed(1)}%
                               </div>
                             </div>
                           </div>
 
-                          <div className="grid min-w-[200px] grid-cols-2 gap-4 sm:min-w-[300px]">
-                            <div className="text-right">
-                              <div className="text-xs uppercase tracking-[0.14em] text-slate-500">
-                                Price
-                              </div>
-                              <div className="mt-1 text-sm font-medium tabular-nums">
-                                {showBalance ? formatMoney(asset.currentPrice) : "••••••"}
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <div className="text-xs uppercase tracking-[0.14em] text-slate-500">
-                                Value
-                              </div>
-                              <div className="mt-1 text-sm font-semibold tabular-nums">
-                                {showBalance ? formatMoney(asset.totalValue) : "••••••"}
-                              </div>
-                            </div>
+                          <div className="h-3 w-full overflow-hidden rounded-full bg-white/8">
+                            <div
+                              className="h-full rounded-full transition-all duration-500"
+                              style={{
+                                width: `${Math.max(asset.percent, 4)}%`,
+                                background: `linear-gradient(90deg, ${asset.color}, ${asset.color}CC)`,
+                              }}
+                            />
                           </div>
                         </div>
                       ))}
                     </div>
                   </div>
+
+                  <div className="space-y-3">
+                    {assetRows.map((asset, index) => (
+                      <div
+                        key={asset.id}
+                        className="flex flex-wrap items-center justify-between gap-4 rounded-3xl bg-white/5 p-4 ring-1 ring-white/8"
+                      >
+                        <div className="flex min-w-0 items-center gap-3">
+                          <div
+                            className="h-11 w-11 rounded-2xl ring-1 ring-white/10 flex items-center justify-center overflow-hidden"
+                            style={{
+                              background:
+                                "linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03))",
+                            }}
+                          >
+                            {asset.image ? (
+                              <img
+                                src={asset.image}
+                                alt={asset.name}
+                                className="h-7 w-7 object-contain"
+                              />
+                            ) : (
+                              <span className="text-xs font-bold">{asset.symbol}</span>
+                            )}
+                          </div>
+
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">{asset.name}</span>
+                              <span
+                                className="h-2.5 w-2.5 rounded-full"
+                                style={{
+                                  backgroundColor: COLORS[index % COLORS.length],
+                                }}
+                              />
+                            </div>
+                            <div className="text-sm text-slate-400">
+                              {asset.symbol} • {formatCoinAmount(asset.amount)}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="grid min-w-[200px] grid-cols-2 gap-4 sm:min-w-[300px]">
+                          <div className="text-right">
+                            <div className="text-xs uppercase tracking-[0.14em] text-slate-500">
+                              Price
+                            </div>
+                            <div className="mt-1 text-sm font-medium tabular-nums">
+                              {showBalance ? formatMoney(asset.currentPrice) : "••••••"}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-xs uppercase tracking-[0.14em] text-slate-500">
+                              Value
+                            </div>
+                            <div className="mt-1 text-sm font-semibold tabular-nums">
+                              {showBalance ? formatMoney(asset.totalValue) : "••••••"}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </section>
 
-              {/* Live Market Prices */}
               <section className="rounded-[28px] border border-white/10 bg-white/5 p-5 sm:p-6 lg:p-7 backdrop-blur-xl">
                 <div className="flex items-center justify-between">
                   <div>
@@ -703,7 +712,6 @@ const Dashboard = () => {
               </section>
             </div>
 
-            {/* Transactions */}
             <section className="mt-6 rounded-[28px] border border-white/10 bg-white/5 p-5 sm:p-6 lg:p-7 backdrop-blur-xl">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
@@ -785,7 +793,6 @@ const Dashboard = () => {
               </div>
             </section>
 
-            {/* Mobile balance toggle */}
             <div className="mt-6 sm:hidden">
               <button
                 onClick={() => setShowBalance((s) => !s)}
@@ -796,7 +803,6 @@ const Dashboard = () => {
               </button>
             </div>
 
-            {/* Footer user action */}
             <div className="mt-6 flex justify-end">
               <button className="inline-flex items-center gap-2 rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 py-2 text-sm text-rose-200 hover:bg-rose-500/15">
                 <LogOut className="h-4 w-4" />
