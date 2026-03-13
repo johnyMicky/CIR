@@ -29,7 +29,8 @@ import { useAuth } from './context/AuthContext';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
-import History from './pages/History'; // <-- ახალი იმპორტი
+import History from './pages/History';
+import MyWallets from './pages/MyWallets'; // <-- ახალი იმპორტი
 
 import AdminRoute from './components/AdminRoute';
 import AdminLayout from './admin/components/AdminLayout';
@@ -254,7 +255,6 @@ const LandingPage = () => {
           </Link>
 
           <div className="flex gap-3 items-center">
-            
             <Link
               to="/login"
               className="text-sm font-bold opacity-70 hover:opacity-100 hover:text-blue-500 transition-all px-4"
@@ -771,8 +771,8 @@ function App() {
       <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <Login />} />
       <Route path="/register" element={user ? <Navigate to="/dashboard" replace /> : <Register />} />
       <Route path="/dashboard" element={user ? <Dashboard /> : <Navigate to="/login" replace />} />
+      <Route path="/my-wallets" element={user ? <MyWallets /> : <Navigate to="/login" replace />} />
       
-      {/* ახალი History როუტი */}
       <Route path="/history" element={user ? <History /> : <Navigate to="/login" replace />} />
 
       <Route
