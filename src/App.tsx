@@ -34,6 +34,7 @@ import MyWallets from './pages/MyWallets';
 import SendReceive from './pages/SendReceive';
 import SettingsPage from './pages/SettingsPage';
 import ExchangeSwap from './pages/ExchangeSwap';
+import SupportPage from './pages/SupportPage';
 import AppShell from './components/AppShell';
 
 import AdminRoute from './components/AdminRoute';
@@ -784,6 +785,7 @@ function App() {
         <Route path="/exchange" element={<ExchangeSwap />} />
         <Route path="/history" element={<History />} />
         <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/support" element={<SupportPage />} />
       </Route>
 
       <Route
