@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { ref, onValue, update } from "firebase/database";
+import { ref, onValue, update, remove } from "firebase/database";
 import { Link } from "react-router-dom";
 import {
   Search,
@@ -12,6 +12,7 @@ import {
   ShieldAlert,
   RotateCcw,
   Wallet,
+  Trash2,
 } from "lucide-react";
 import { db } from "../../firebase";
 
@@ -101,6 +102,7 @@ const AdminUsers = () => {
     ETH: 0,
     USDT: 1,
   });
+  const [deletingUserId, setDeletingUserId] = useState("");
 
   useEffect(() => {
     const usersRef = ref(db, "users");
@@ -167,7 +169,7 @@ const AdminUsers = () => {
 
   useEffect(() => {
     if (!toast) return;
-    const timer = setTimeout(() => setToast(""), 2200);
+    const timer = setTimeout(() => setToast(""), 2400);
     return () => clearTimeout(timer);
   }, [toast]);
 
@@ -290,6 +292,31 @@ const AdminUsers = () => {
     }
   };
 
+  const deleteUser = async (user: UserItem) => {
+    const confirmed = window.confirm(
+      `Delete ${getDisplayName(user)}?\n\nThis will remove:\n- user profile\n- user transactions\n- user activity logs\n\nThis action cannot be undone from the admin panel.`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setDeletingUserId(user.id);
+
+      await Promise.all([
+        remove(ref(db, `users/${user.id}`)),
+        remove(ref(db, `transactions/${user.id}`)),
+        remove(ref(db, `activity_logs/${user.id}`)),
+      ]);
+
+      setToast("User deleted from admin panel");
+    } catch (error) {
+      console.error("Delete user error:", error);
+      setToast("Failed to delete user");
+    } finally {
+      setDeletingUserId("");
+    }
+  };
+
   return (
     <div className="space-y-6 text-white">
       {toast && (
@@ -334,7 +361,9 @@ const AdminUsers = () => {
 
           <div className="rounded-2xl border border-white/8 bg-white/[0.04] px-4 py-4">
             <div className="text-xs text-slate-400 mb-1">Total Balance</div>
-            <div className="text-2xl font-black break-words">{formatMoney(stats.totalBalanceUsd)}</div>
+            <div className="text-2xl font-black break-words">
+              {formatMoney(stats.totalBalanceUsd)}
+            </div>
           </div>
         </div>
       </div>
@@ -439,6 +468,7 @@ const AdminUsers = () => {
           <div className="space-y-4">
             {filteredUsers.map((user) => {
               const accountStatus = getAccountStatus(user);
+              const isDeleting = deletingUserId === user.id;
 
               return (
                 <div
@@ -594,6 +624,15 @@ const AdminUsers = () => {
                       >
                         <RotateCcw size={16} />
                         Reactivate
+                      </button>
+
+                      <button
+                        onClick={() => deleteUser(user)}
+                        disabled={isDeleting}
+                        className="inline-flex items-center gap-2 rounded-2xl bg-red-500/10 border border-red-500/20 px-4 py-3 text-sm text-red-300 hover:bg-red-500/15 disabled:opacity-50"
+                      >
+                        <Trash2 size={16} />
+                        {isDeleting ? "Deleting..." : "Delete"}
                       </button>
                     </div>
                   </div>
