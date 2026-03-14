@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 
 import { auth } from "../firebase";
+import { useAuth } from "../context/AuthContext";
 
 type SidebarKey =
   | "dashboard"
@@ -30,6 +31,7 @@ type SidebarKey =
 const AppShell = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user, setUser } = useAuth() as any;
 
   const [showBalance, setShowBalance] = useState(true);
   const [globalSearch, setGlobalSearch] = useState("");
@@ -61,10 +63,22 @@ const AppShell = () => {
     return "dashboard";
   }, [location.pathname]);
 
+  const displayName = useMemo(() => {
+    return (
+      user?.fullName ||
+      `${user?.firstName || ""} ${user?.lastName || ""}`.trim() ||
+      user?.name ||
+      user?.username ||
+      user?.email ||
+      "Client"
+    );
+  }, [user]);
+
   const logout = async () => {
     try {
       await signOut(auth);
       localStorage.removeItem("authUser");
+      setUser(null);
       setLogoutMessage("Successfully logged out");
 
       setTimeout(() => {
@@ -160,7 +174,7 @@ const AppShell = () => {
 
             <div className="flex items-center gap-3 rounded-xl bg-white/5 px-4 py-2">
               <div className="h-8 w-8 rounded-full bg-cyan-400/30"></div>
-              <div className="text-sm">Client</div>
+              <div className="text-sm">{displayName}</div>
             </div>
           </div>
         </header>
