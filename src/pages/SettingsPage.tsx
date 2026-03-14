@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useOutletContext } from "react-router-dom";
+import { ref, update } from "firebase/database";
 import {
   User,
   Shield,
@@ -19,6 +20,9 @@ import {
   KeyRound,
 } from "lucide-react";
 
+import { db } from "../firebase";
+import { useAuth } from "../context/AuthContext";
+
 type ShellContext = {
   showBalance: boolean;
   setShowBalance: React.Dispatch<React.SetStateAction<boolean>>;
@@ -29,16 +33,17 @@ type SettingsTab = "profile" | "security" | "notifications" | "preferences";
 
 const SettingsPage = () => {
   const { showBalance, setShowBalance } = useOutletContext<ShellContext>();
+  const { user, setUser } = useAuth() as any;
 
   const [toast, setToast] = useState("");
   const [activeTab, setActiveTab] = useState<SettingsTab>("profile");
 
   const [profile, setProfile] = useState({
-    fullName: "Michael Carter",
-    email: "michael.carter@axcelci.com",
-    phone: "+1 202 555 0187",
-    country: "United States",
-    region: "New York",
+    fullName: "",
+    email: "",
+    phone: "",
+    country: "",
+    region: "",
   });
 
   const [security, setSecurity] = useState({
@@ -69,6 +74,30 @@ const SettingsPage = () => {
   });
 
   useEffect(() => {
+    if (!user) return;
+
+    const fullName =
+      user.fullName ||
+      `${user.firstName || ""} ${user.lastName || ""}`.trim() ||
+      user.name ||
+      "";
+
+    const region =
+      user.region ||
+      [user.stateRegion, user.city].filter(Boolean).join(" / ") ||
+      user.city ||
+      "";
+
+    setProfile({
+      fullName,
+      email: user.email || "",
+      phone: user.phone || "",
+      country: user.country || "",
+      region,
+    });
+  }, [user]);
+
+  useEffect(() => {
     if (!toast) return;
     const timer = setTimeout(() => setToast(""), 2200);
     return () => clearTimeout(timer);
@@ -84,8 +113,43 @@ const SettingsPage = () => {
     []
   );
 
-  const saveProfile = () => {
-    setToast("Profile settings saved");
+  const saveProfile = async () => {
+    if (!user?.id) {
+      setToast("User session not found");
+      return;
+    }
+
+    try {
+      const nameParts = profile.fullName.trim().split(" ");
+      const firstName = nameParts[0] || "";
+      const lastName = nameParts.slice(1).join(" ");
+
+      await update(ref(db, `users/${user.id}`), {
+        fullName: profile.fullName.trim(),
+        firstName,
+        lastName,
+        email: profile.email.trim(),
+        phone: profile.phone.trim(),
+        country: profile.country.trim(),
+        stateRegion: profile.region.trim(),
+      });
+
+      setUser((prev: any) => ({
+        ...prev,
+        fullName: profile.fullName.trim(),
+        firstName,
+        lastName,
+        email: profile.email.trim(),
+        phone: profile.phone.trim(),
+        country: profile.country.trim(),
+        stateRegion: profile.region.trim(),
+      }));
+
+      setToast("Profile settings saved");
+    } catch (error) {
+      console.error("Profile save error:", error);
+      setToast("Failed to save profile");
+    }
   };
 
   const saveSecurity = () => {
@@ -175,7 +239,6 @@ const SettingsPage = () => {
       </div>
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[280px_minmax(0,1fr)]">
-        {/* LEFT MENU */}
         <aside className="rounded-[28px] border border-white/10 bg-white/5 p-4 backdrop-blur-xl">
           <div className="mb-4 text-sm font-medium uppercase tracking-[0.18em] text-slate-400">
             Sections
@@ -212,7 +275,6 @@ const SettingsPage = () => {
           </div>
         </aside>
 
-        {/* RIGHT CONTENT */}
         <section className="rounded-[28px] border border-white/10 bg-white/5 p-5 backdrop-blur-xl sm:p-6 lg:p-7">
           {activeTab === "profile" && (
             <div>
@@ -529,8 +591,6 @@ const SettingsPage = () => {
                     <option value="BTC" className="bg-slate-900">BTC</option>
                     <option value="ETH" className="bg-slate-900">ETH</option>
                     <option value="USDT" className="bg-slate-900">USDT</option>
-                    <option value="SOL" className="bg-slate-900">SOL</option>
-                    <option value="BNB" className="bg-slate-900">BNB</option>
                   </select>
                 </div>
 
@@ -547,7 +607,6 @@ const SettingsPage = () => {
                     <option value="TRC20" className="bg-slate-900">TRC20</option>
                     <option value="BEP20" className="bg-slate-900">BEP20</option>
                     <option value="Bitcoin" className="bg-slate-900">Bitcoin</option>
-                    <option value="Solana" className="bg-slate-900">Solana</option>
                   </select>
                 </div>
 
