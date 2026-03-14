@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { ref, get } from 'firebase/database';
 import { ShieldCheck, AlertCircle } from 'lucide-react';
 import { auth, db } from '../firebase';
@@ -30,7 +30,23 @@ const Login = () => {
       const userRef = ref(db, `users/${uid}`);
       const snapshot = await get(userRef);
 
-      const dbUser = snapshot.exists() ? snapshot.val() : {};
+      if (!snapshot.exists()) {
+        await signOut(auth);
+        throw new Error('User record not found.');
+      }
+
+      const dbUser = snapshot.val() || {};
+      const accountStatus = String(dbUser.accountStatus || dbUser.status || 'active').toLowerCase();
+
+      if (accountStatus === 'suspended') {
+        await signOut(auth);
+        throw new Error('Your account is suspended. Please contact support.');
+      }
+
+      if (accountStatus === 'blocked') {
+        await signOut(auth);
+        throw new Error('Your account has been blocked.');
+      }
 
       setUser({
         ...dbUser,
@@ -38,10 +54,20 @@ const Login = () => {
         email: cred.user.email,
       });
 
-      navigate('/dashboard');
-    } catch (err) {
+      navigate('/dashboard', { replace: true });
+    } catch (err: any) {
       console.error('Login error:', err);
-      setError('Invalid email or password.');
+
+      const message =
+        err?.message === 'Your account is suspended. Please contact support.'
+          ? err.message
+          : err?.message === 'Your account has been blocked.'
+          ? err.message
+          : err?.message === 'User record not found.'
+          ? err.message
+          : 'Invalid email or password.';
+
+      setError(message);
     } finally {
       setLoading(false);
     }
