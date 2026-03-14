@@ -179,10 +179,7 @@ const AdminUsers = () => {
       const eth = toNumber(wallets.ETH ?? user.eth_balance);
       const usdt = toNumber(wallets.USDT ?? user.usdt_balance);
 
-      const totalUsd =
-        btc * market.BTC +
-        eth * market.ETH +
-        usdt * market.USDT;
+      const totalUsd = btc * market.BTC + eth * market.ETH + usdt * market.USDT;
 
       return {
         ...user,
@@ -301,48 +298,48 @@ const AdminUsers = () => {
         </div>
       )}
 
-      <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
-        <div>
-          <div className="text-[11px] uppercase tracking-[0.22em] text-blue-300 font-bold mb-2">
+      <div className="flex flex-col gap-4 2xl:flex-row 2xl:items-end 2xl:justify-between">
+        <div className="max-w-2xl">
+          <div className="mb-2 text-[11px] uppercase tracking-[0.22em] text-cyan-300 font-bold">
             Admin Users
           </div>
-          <h1 className="text-3xl md:text-4xl font-black tracking-tight">
+          <h1 className="text-3xl font-black tracking-tight sm:text-4xl">
             Users Management
           </h1>
-          <p className="text-slate-400 mt-2">
+          <p className="mt-2 text-slate-400">
             Full client overview with live status, balances, account control and filtering.
           </p>
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-          <div className="rounded-2xl border border-white/8 bg-white/[0.04] px-4 py-4 min-w-[120px]">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+          <div className="rounded-2xl border border-white/8 bg-white/[0.04] px-4 py-4">
             <div className="text-xs text-slate-400 mb-1">Users</div>
             <div className="text-2xl font-black">{stats.totalUsers}</div>
           </div>
 
-          <div className="rounded-2xl border border-white/8 bg-white/[0.04] px-4 py-4 min-w-[120px]">
+          <div className="rounded-2xl border border-white/8 bg-white/[0.04] px-4 py-4">
             <div className="text-xs text-slate-400 mb-1">Online</div>
             <div className="text-2xl font-black text-emerald-400">{stats.onlineUsers}</div>
           </div>
 
-          <div className="rounded-2xl border border-white/8 bg-white/[0.04] px-4 py-4 min-w-[120px]">
+          <div className="rounded-2xl border border-white/8 bg-white/[0.04] px-4 py-4">
             <div className="text-xs text-slate-400 mb-1">Suspended</div>
             <div className="text-2xl font-black text-amber-400">{stats.suspendedUsers}</div>
           </div>
 
-          <div className="rounded-2xl border border-white/8 bg-white/[0.04] px-4 py-4 min-w-[120px]">
+          <div className="rounded-2xl border border-white/8 bg-white/[0.04] px-4 py-4">
             <div className="text-xs text-slate-400 mb-1">Blocked</div>
             <div className="text-2xl font-black text-rose-400">{stats.blockedUsers}</div>
           </div>
 
-          <div className="rounded-2xl border border-white/8 bg-white/[0.04] px-4 py-4 min-w-[160px]">
+          <div className="rounded-2xl border border-white/8 bg-white/[0.04] px-4 py-4">
             <div className="text-xs text-slate-400 mb-1">Total Balance</div>
-            <div className="text-xl font-black">{formatMoney(stats.totalBalanceUsd)}</div>
+            <div className="text-2xl font-black break-words">{formatMoney(stats.totalBalanceUsd)}</div>
           </div>
         </div>
       </div>
 
-      <div className="rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-4 md:p-5 space-y-4">
+      <div className="rounded-[30px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-4 md:p-5 space-y-4">
         <div className="relative">
           <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
           <input
@@ -350,11 +347,11 @@ const AdminUsers = () => {
             placeholder="Search by name, email, country, city, phone..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-2xl bg-black/20 border border-white/10 pl-12 pr-4 py-4 text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500"
+            className="w-full rounded-2xl bg-black/20 border border-white/10 pl-12 pr-4 py-4 text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-400/40"
           />
         </div>
 
-        <div className="grid md:grid-cols-2 xl:grid-cols-5 gap-3">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
           <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
             <div className="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-slate-400 mb-2">
               <Filter size={14} />
@@ -433,128 +430,172 @@ const AdminUsers = () => {
         </div>
       </div>
 
-      <div className="rounded-[32px] border border-white/8 bg-[linear-gradient(180deg,#0b1220_0%,#0d1628_100%)] p-4 md:p-6 shadow-[0_12px_30px_rgba(0,0,0,0.18)]">
+      <div className="rounded-[32px] border border-white/8 bg-[linear-gradient(180deg,#0b1220_0%,#0d1628_100%)] p-4 md:p-5 shadow-[0_12px_30px_rgba(0,0,0,0.18)]">
         {filteredUsers.length === 0 ? (
           <div className="text-center py-14 text-slate-400">
             No users found.
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-4">
             {filteredUsers.map((user) => {
               const accountStatus = getAccountStatus(user);
 
               return (
                 <div
                   key={user.id}
-                  className="rounded-[24px] border border-white/8 bg-black/20 p-4 md:p-5 flex flex-col gap-4"
+                  className="rounded-[28px] border border-white/8 bg-black/20 p-4 md:p-5"
                 >
-                  <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="w-11 h-11 rounded-2xl bg-blue-600/15 border border-blue-500/20 flex items-center justify-center text-blue-300 shrink-0">
-                          <Users size={18} />
+                  <div className="flex flex-col gap-5">
+                    <div className="flex flex-col gap-4 2xl:flex-row 2xl:items-start 2xl:justify-between">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start gap-4">
+                          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-3xl border border-blue-500/20 bg-blue-600/15 text-blue-300">
+                            <Users size={20} />
+                          </div>
+
+                          <div className="min-w-0">
+                            <div className="truncate text-xl font-semibold text-white">
+                              {getDisplayName(user)}
+                            </div>
+                            <div className="mt-1 break-all text-base text-slate-400">
+                              {user.email || "No email"}
+                            </div>
+                          </div>
                         </div>
 
-                        <div className="min-w-0">
-                          <div className="font-semibold text-white truncate">
-                            {getDisplayName(user)}
+                        <div className="mt-5 grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
+                          <div className="rounded-2xl bg-white/[0.03] p-3">
+                            <div className="text-xs uppercase tracking-[0.14em] text-slate-500">
+                              Country
+                            </div>
+                            <div className="mt-2 text-sm font-medium text-slate-200 break-words">
+                              {user.country || "-"}
+                            </div>
                           </div>
-                          <div className="text-sm text-slate-400 truncate">
-                            {user.email || "No email"}
+
+                          <div className="rounded-2xl bg-white/[0.03] p-3">
+                            <div className="text-xs uppercase tracking-[0.14em] text-slate-500">
+                              Region
+                            </div>
+                            <div className="mt-2 text-sm font-medium text-slate-200 break-words">
+                              {user.stateRegion || "-"}
+                            </div>
+                          </div>
+
+                          <div className="rounded-2xl bg-white/[0.03] p-3">
+                            <div className="text-xs uppercase tracking-[0.14em] text-slate-500">
+                              City
+                            </div>
+                            <div className="mt-2 text-sm font-medium text-slate-200 break-words">
+                              {user.city || "-"}
+                            </div>
+                          </div>
+
+                          <div className="rounded-2xl bg-white/[0.03] p-3">
+                            <div className="text-xs uppercase tracking-[0.14em] text-slate-500">
+                              Phone
+                            </div>
+                            <div className="mt-2 text-sm font-medium text-slate-200 break-all">
+                              {user.phone || "-"}
+                            </div>
+                          </div>
+
+                          <div className="rounded-2xl bg-white/[0.03] p-3">
+                            <div className="text-xs uppercase tracking-[0.14em] text-slate-500">
+                              Last Seen
+                            </div>
+                            <div className="mt-2 text-sm font-medium text-slate-200 break-words">
+                              {formatLastSeen(user.last_seen)}
+                            </div>
+                          </div>
+
+                          <div className="rounded-2xl bg-white/[0.03] p-3">
+                            <div className="text-xs uppercase tracking-[0.14em] text-slate-500">
+                              Balance
+                            </div>
+                            <div className="mt-2 text-sm font-semibold text-slate-200 break-words">
+                              {formatMoney(user.totalUsd)}
+                            </div>
                           </div>
                         </div>
                       </div>
 
-                      <div className="grid md:grid-cols-2 xl:grid-cols-6 gap-3 text-sm">
-                        <div className="text-slate-400">
-                          <span className="text-white/90">Country:</span> {user.country || "-"}
-                        </div>
-                        <div className="text-slate-400">
-                          <span className="text-white/90">Region:</span> {user.stateRegion || "-"}
-                        </div>
-                        <div className="text-slate-400">
-                          <span className="text-white/90">City:</span> {user.city || "-"}
-                        </div>
-                        <div className="text-slate-400">
-                          <span className="text-white/90">Phone:</span> {user.phone || "-"}
-                        </div>
-                        <div className="text-slate-400">
-                          <span className="text-white/90">Last seen:</span> {formatLastSeen(user.last_seen)}
-                        </div>
-                        <div className="text-slate-400">
-                          <span className="text-white/90">Balance:</span> {formatMoney(user.totalUsd)}
+                      <div className="flex w-full flex-col gap-3 2xl:w-auto 2xl:min-w-[260px]">
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-1">
+                          <div className="rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-3">
+                            <div className="text-[11px] uppercase tracking-[0.18em] text-white/30 font-bold">
+                              Role / Status
+                            </div>
+                            <div className="mt-2 flex items-center justify-between gap-3">
+                              <div className="text-sm capitalize text-slate-300">
+                                {user.role || "user"}
+                              </div>
+                              <div
+                                className={`text-sm font-semibold capitalize ${
+                                  accountStatus === "active"
+                                    ? "text-emerald-400"
+                                    : accountStatus === "suspended"
+                                    ? "text-amber-400"
+                                    : "text-rose-400"
+                                }`}
+                              >
+                                {accountStatus}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div
+                            className={`inline-flex items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-sm ${
+                              user.online
+                                ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300"
+                                : "border-white/10 bg-white/[0.04] text-slate-300"
+                            }`}
+                          >
+                            {user.online ? <Wifi size={16} /> : <WifiOff size={16} />}
+                            <span>{user.online ? "Online" : "Offline"}</span>
+                          </div>
+
+                          <div className="inline-flex items-center justify-center gap-2 rounded-2xl border border-cyan-500/20 bg-cyan-500/10 px-4 py-3 text-sm text-cyan-300 sm:col-span-2 2xl:col-span-1">
+                            <Wallet size={16} />
+                            <span className="font-medium">{formatMoney(user.totalUsd)}</span>
+                          </div>
+
+                          <Link
+                            to={`/admin/users/${user.id}`}
+                            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 py-3 text-sm font-medium text-white transition-all hover:bg-blue-500 sm:col-span-2 2xl:col-span-1"
+                          >
+                            <span>Open</span>
+                            <ChevronRight size={16} />
+                          </Link>
                         </div>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3 shrink-0 flex-wrap">
-                      <div className="text-right">
-                        <div className="text-xs uppercase tracking-[0.18em] text-white/30 font-bold">
-                          {user.role || "user"}
-                        </div>
-                        <div
-                          className={`text-sm mt-1 font-semibold ${
-                            accountStatus === "active"
-                              ? "text-emerald-400"
-                              : accountStatus === "suspended"
-                              ? "text-amber-400"
-                              : "text-rose-400"
-                          }`}
-                        >
-                          {accountStatus}
-                        </div>
-                      </div>
-
-                      <div
-                        className={`inline-flex items-center gap-2 px-3 py-2 rounded-2xl border text-sm ${
-                          user.online
-                            ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300"
-                            : "border-white/10 bg-white/[0.04] text-slate-300"
-                        }`}
+                    <div className="flex flex-wrap gap-3">
+                      <button
+                        onClick={() => updateAccountStatus(user.id, "suspended")}
+                        className="inline-flex items-center gap-2 rounded-2xl bg-amber-500/10 border border-amber-500/20 px-4 py-3 text-sm text-amber-300 hover:bg-amber-500/15"
                       >
-                        {user.online ? <Wifi size={16} /> : <WifiOff size={16} />}
-                        <span>{user.online ? "Online" : "Offline"}</span>
-                      </div>
+                        <ShieldAlert size={16} />
+                        Suspend
+                      </button>
 
-                      <div className="inline-flex items-center gap-2 px-3 py-2 rounded-2xl border border-cyan-500/20 bg-cyan-500/10 text-cyan-300 text-sm">
-                        <Wallet size={16} />
-                        <span>{formatMoney(user.totalUsd)}</span>
-                      </div>
-
-                      <Link
-                        to={`/admin/users/${user.id}`}
-                        className="inline-flex items-center gap-2 px-4 py-3 rounded-2xl bg-blue-600 hover:bg-blue-500 transition-all"
+                      <button
+                        onClick={() => updateAccountStatus(user.id, "blocked")}
+                        className="inline-flex items-center gap-2 rounded-2xl bg-rose-500/10 border border-rose-500/20 px-4 py-3 text-sm text-rose-300 hover:bg-rose-500/15"
                       >
-                        <span>Open</span>
-                        <ChevronRight size={16} />
-                      </Link>
+                        <Ban size={16} />
+                        Block
+                      </button>
+
+                      <button
+                        onClick={() => updateAccountStatus(user.id, "active")}
+                        className="inline-flex items-center gap-2 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 px-4 py-3 text-sm text-emerald-300 hover:bg-emerald-500/15"
+                      >
+                        <RotateCcw size={16} />
+                        Reactivate
+                      </button>
                     </div>
-                  </div>
-
-                  <div className="flex flex-wrap gap-3">
-                    <button
-                      onClick={() => updateAccountStatus(user.id, "suspended")}
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-300 hover:bg-amber-500/15"
-                    >
-                      <ShieldAlert size={16} />
-                      Suspend
-                    </button>
-
-                    <button
-                      onClick={() => updateAccountStatus(user.id, "blocked")}
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-300 hover:bg-rose-500/15"
-                    >
-                      <Ban size={16} />
-                      Block
-                    </button>
-
-                    <button
-                      onClick={() => updateAccountStatus(user.id, "active")}
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 hover:bg-emerald-500/15"
-                    >
-                      <RotateCcw size={16} />
-                      Reactivate
-                    </button>
                   </div>
                 </div>
               );
