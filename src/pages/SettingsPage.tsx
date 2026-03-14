@@ -37,6 +37,7 @@ const SettingsPage = () => {
 
   const [toast, setToast] = useState("");
   const [activeTab, setActiveTab] = useState<SettingsTab>("profile");
+  const [savingProfile, setSavingProfile] = useState(false);
 
   const [profile, setProfile] = useState({
     fullName: "",
@@ -76,30 +77,31 @@ const SettingsPage = () => {
   useEffect(() => {
     if (!user) return;
 
-    const fullName =
+    const resolvedFullName =
       user.fullName ||
       `${user.firstName || ""} ${user.lastName || ""}`.trim() ||
       user.name ||
       "";
 
-    const region =
+    const resolvedRegion =
+      user.stateRegion ||
       user.region ||
-      [user.stateRegion, user.city].filter(Boolean).join(" / ") ||
+      [user.city, user.stateRegion].filter(Boolean).join(" / ") ||
       user.city ||
       "";
 
     setProfile({
-      fullName,
+      fullName: resolvedFullName,
       email: user.email || "",
       phone: user.phone || "",
       country: user.country || "",
-      region,
+      region: resolvedRegion,
     });
   }, [user]);
 
   useEffect(() => {
     if (!toast) return;
-    const timer = setTimeout(() => setToast(""), 2200);
+    const timer = setTimeout(() => setToast(""), 2400);
     return () => clearTimeout(timer);
   }, [toast]);
 
@@ -119,13 +121,16 @@ const SettingsPage = () => {
       return;
     }
 
+    const cleanedFullName = profile.fullName.trim();
+    const nameParts = cleanedFullName.split(/\s+/).filter(Boolean);
+    const firstName = nameParts[0] || "";
+    const lastName = nameParts.slice(1).join(" ");
+
     try {
-      const nameParts = profile.fullName.trim().split(" ");
-      const firstName = nameParts[0] || "";
-      const lastName = nameParts.slice(1).join(" ");
+      setSavingProfile(true);
 
       await update(ref(db, `users/${user.id}`), {
-        fullName: profile.fullName.trim(),
+        fullName: cleanedFullName,
         firstName,
         lastName,
         email: profile.email.trim(),
@@ -136,7 +141,7 @@ const SettingsPage = () => {
 
       setUser((prev: any) => ({
         ...prev,
-        fullName: profile.fullName.trim(),
+        fullName: cleanedFullName,
         firstName,
         lastName,
         email: profile.email.trim(),
@@ -149,6 +154,8 @@ const SettingsPage = () => {
     } catch (error) {
       console.error("Profile save error:", error);
       setToast("Failed to save profile");
+    } finally {
+      setSavingProfile(false);
     }
   };
 
@@ -288,10 +295,11 @@ const SettingsPage = () => {
 
                 <button
                   onClick={saveProfile}
-                  className="inline-flex h-12 items-center gap-2 rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 px-5 text-sm font-medium text-white shadow-[0_0_25px_rgba(34,211,238,0.18)] hover:opacity-95"
+                  disabled={savingProfile}
+                  className="inline-flex h-12 items-center gap-2 rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 px-5 text-sm font-medium text-white shadow-[0_0_25px_rgba(34,211,238,0.18)] hover:opacity-95 disabled:opacity-60"
                 >
                   <Save className="h-4 w-4" />
-                  Save Profile
+                  {savingProfile ? "Saving..." : "Save Profile"}
                 </button>
               </div>
 
