@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Routes, Route, Navigate, Link } from 'react-router-dom';
-import { onAuthStateChanged } from 'firebase/auth';
+import { Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { ref, get } from 'firebase/database';
 import {
   Shield,
