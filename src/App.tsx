@@ -36,6 +36,7 @@ import SettingsPage from './pages/SettingsPage';
 import ExchangeSwap from './pages/ExchangeSwap';
 import SupportPage from './pages/SupportPage';
 import Documentation from './pages/Documentation';
+import TermsOfService from './pages/TermsOfService';
 import AppShell from './components/AppShell';
 
 import AdminRoute from './components/AdminRoute';
@@ -482,7 +483,8 @@ const LandingPage = () => {
               <div className="text-sm text-slate-400 mt-2">Stable private wallet experience and protected routing layer</div>
             </div>
           </div>
-                    <div className="mt-10 rounded-[28px] border border-white/8 bg-black/20 px-6 py-6 shadow-[0_12px_30px_rgba(0,0,0,0.12)]">
+
+          <div className="mt-10 rounded-[28px] border border-white/8 bg-black/20 px-6 py-6 shadow-[0_12px_30px_rgba(0,0,0,0.12)]">
             <div className="flex items-center gap-3 mb-6">
               <Quote size={18} className="text-blue-400" />
               <div>
@@ -699,6 +701,10 @@ const LandingPage = () => {
                   <ChevronRight size={14} />
                   Documentation
                 </Link>
+                <Link to="/terms" className="flex items-center gap-2 text-sm text-slate-300 hover:text-blue-400 transition-colors">
+                  <ChevronRight size={14} />
+                  Terms of Service
+                </Link>
               </div>
             </div>
 
@@ -716,8 +722,11 @@ const LandingPage = () => {
 
           <div className="mt-8 pt-6 border-t border-white/5 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
             <div className="text-sm text-slate-500">© 2026 Axcel Private Wallet. All rights reserved.</div>
-            <div className="text-[11px] uppercase tracking-[0.2em] text-white/25 font-bold">
-              Premium Private Wallet Interface
+            <div className="flex flex-wrap items-center gap-4 text-[11px] uppercase tracking-[0.2em] text-white/25 font-bold">
+              <span>Premium Private Wallet Interface</span>
+              <Link to="/terms" className="hover:text-blue-400 transition-colors">
+                Terms of Service
+              </Link>
             </div>
           </div>
         </div>
@@ -777,6 +786,7 @@ function App() {
     <Routes>
       <Route path="/" element={<LandingPage />} />
       <Route path="/documentation" element={<Documentation />} />
+      <Route path="/terms" element={<TermsOfService />} />
 
       <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <Login />} />
       <Route path="/register" element={user ? <Navigate to="/dashboard" replace /> : <Register />} />
