@@ -38,6 +38,7 @@ import SupportPage from './pages/SupportPage';
 import Documentation from './pages/Documentation';
 import TermsOfService from './pages/TermsOfService';
 import PrivacyPolicy from './pages/PrivacyPolicy';
+import AmlKycPolicy from './pages/AmlKycPolicy';
 import AppShell from './components/AppShell';
 
 import AdminRoute from './components/AdminRoute';
@@ -710,6 +711,10 @@ const LandingPage = () => {
                   <ChevronRight size={14} />
                   Privacy Policy
                 </Link>
+                <Link to="/aml-kyc" className="flex items-center gap-2 text-sm text-slate-300 hover:text-blue-400 transition-colors">
+                  <ChevronRight size={14} />
+                  AML / KYC Policy
+                </Link>
               </div>
             </div>
 
@@ -734,6 +739,9 @@ const LandingPage = () => {
               </Link>
               <Link to="/privacy" className="hover:text-blue-400 transition-colors">
                 Privacy Policy
+              </Link>
+              <Link to="/aml-kyc" className="hover:text-blue-400 transition-colors">
+                AML / KYC Policy
               </Link>
             </div>
           </div>
@@ -796,6 +804,7 @@ function App() {
       <Route path="/documentation" element={<Documentation />} />
       <Route path="/terms" element={<TermsOfService />} />
       <Route path="/privacy" element={<PrivacyPolicy />} />
+      <Route path="/aml-kyc" element={<AmlKycPolicy />} />
 
       <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <Login />} />
       <Route path="/register" element={user ? <Navigate to="/dashboard" replace /> : <Register />} />
