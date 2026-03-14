@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { Routes, Route, Navigate, Link } from 'react-router-dom';
+import { onAuthStateChanged } from 'firebase/auth';
 import { ref, get } from 'firebase/database';
 import {
   Shield,
@@ -35,6 +35,7 @@ import SendReceive from './pages/SendReceive';
 import SettingsPage from './pages/SettingsPage';
 import ExchangeSwap from './pages/ExchangeSwap';
 import SupportPage from './pages/SupportPage';
+import Documentation from './pages/Documentation';
 import AppShell from './components/AppShell';
 
 import AdminRoute from './components/AdminRoute';
@@ -481,8 +482,7 @@ const LandingPage = () => {
               <div className="text-sm text-slate-400 mt-2">Stable private wallet experience and protected routing layer</div>
             </div>
           </div>
-
-          <div className="mt-10 rounded-[28px] border border-white/8 bg-black/20 px-6 py-6 shadow-[0_12px_30px_rgba(0,0,0,0.12)]">
+                    <div className="mt-10 rounded-[28px] border border-white/8 bg-black/20 px-6 py-6 shadow-[0_12px_30px_rgba(0,0,0,0.12)]">
             <div className="flex items-center gap-3 mb-6">
               <Quote size={18} className="text-blue-400" />
               <div>
@@ -695,6 +695,10 @@ const LandingPage = () => {
                   <ChevronRight size={14} />
                   Register
                 </Link>
+                <Link to="/documentation" className="flex items-center gap-2 text-sm text-slate-300 hover:text-blue-400 transition-colors">
+                  <ChevronRight size={14} />
+                  Documentation
+                </Link>
               </div>
             </div>
 
@@ -772,13 +776,12 @@ function App() {
   return (
     <Routes>
       <Route path="/" element={<LandingPage />} />
+      <Route path="/documentation" element={<Documentation />} />
 
       <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <Login />} />
       <Route path="/register" element={user ? <Navigate to="/dashboard" replace /> : <Register />} />
 
-      <Route
-        element={user ? <AppShell /> : <Navigate to="/login" replace />}
-      >
+      <Route element={user ? <AppShell /> : <Navigate to="/login" replace />}>
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/my-wallets" element={<MyWallets />} />
         <Route path="/send-receive" element={<SendReceive />} />
