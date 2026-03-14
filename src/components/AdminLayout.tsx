@@ -108,7 +108,7 @@ const AdminLayout = () => {
         })}
       </div>
 
-      <div className="px-4 pt-2">
+      <div className="px-4 pt-2 pb-4">
         <div className="rounded-[24px] border border-white/8 bg-[linear-gradient(180deg,rgba(34,211,238,0.10),rgba(255,255,255,0.02))] p-4 shadow-[0_12px_30px_rgba(0,0,0,0.12)]">
           <div className="mb-3 flex items-center gap-2 text-cyan-300">
             <Activity size={16} />
@@ -134,7 +134,7 @@ const AdminLayout = () => {
         </div>
       </div>
 
-      <div className="mt-auto border-t border-white/8 p-4">
+      <div className="border-t border-white/8 p-4">
         <div className="mb-3 rounded-[22px] border border-white/8 bg-white/[0.03] p-4">
           <div className="mb-2 flex items-center gap-2 text-cyan-300">
             <Sparkles size={14} />
