@@ -8,8 +8,6 @@ import {
   Globe,
   MapPin,
   Wallet,
-  CheckCircle2,
-  AlertCircle,
   Wifi,
   WifiOff,
   Clock3,
@@ -17,9 +15,20 @@ import {
   RefreshCw,
   BadgeDollarSign,
   Activity,
-  ChevronRight
+  ChevronRight,
+  ShieldAlert,
+  Ban,
+  RotateCcw,
+  ArrowDownCircle,
+  ArrowUpCircle,
 } from "lucide-react";
 import { db } from "../../firebase";
+
+type WalletMap = {
+  BTC?: number | string;
+  ETH?: number | string;
+  USDT?: number | string;
+};
 
 type UserRecord = {
   firstName?: string;
@@ -32,14 +41,17 @@ type UserRecord = {
   city?: string;
   role?: string;
   status?: string;
+  accountStatus?: "active" | "suspended" | "blocked" | string;
   created_at?: string;
   last_seen?: number | string;
   online?: boolean;
 
-  btc_balance?: number;
-  eth_balance?: number;
-  usdt_balance?: number;
-  usd_balance?: number;
+  wallets?: WalletMap;
+
+  btc_balance?: number | string;
+  eth_balance?: number | string;
+  usdt_balance?: number | string;
+  usd_balance?: number | string;
 
   btc_address?: string;
   eth_address?: string;
@@ -54,10 +66,19 @@ type ActivityItem = {
   details?: any;
 };
 
-const COIN_PRICES = {
-  BTC: 65000,
-  ETH: 3500,
-  USDT: 1
+type ManualActionStatus = "Pending" | "Completed" | "Failed";
+type ManualActionKind = "credit" | "debit";
+type ManualInputMode = "usd_to_crypto" | "crypto_direct";
+
+type MarketPrices = {
+  BTC: number;
+  ETH: number;
+  USDT: number;
+};
+
+const toNumber = (value: unknown) => {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : 0;
 };
 
 const formatLastSeen = (value?: number | string) => {
@@ -84,41 +105,98 @@ const formatActivityTime = (value?: number | string) => {
   return new Date(timestamp).toLocaleString();
 };
 
+const formatMoney = (value: number) =>
+  new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 2,
+  }).format(value);
+
+const formatCoin = (value: number) =>
+  new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: value < 1 ? 4 : 2,
+    maximumFractionDigits: value < 1 ? 8 : 6,
+  }).format(value);
+
 const AdminUserDetails = () => {
   const { id } = useParams();
 
   const [userData, setUserData] = useState<UserRecord | null>(null);
   const [activities, setActivities] = useState<ActivityItem[]>([]);
+  const [marketPrices, setMarketPrices] = useState<MarketPrices>({
+    BTC: 65000,
+    ETH: 3500,
+    USDT: 1,
+  });
 
   const [wallets, setWallets] = useState({
     btc_address: "",
     eth_address: "",
-    usdt_address: ""
+    usdt_address: "",
   });
 
   const [balances, setBalances] = useState({
     btc_balance: "",
     eth_balance: "",
     usdt_balance: "",
-    usd_balance: ""
+    usd_balance: "",
   });
 
   const [balanceReason, setBalanceReason] = useState("");
 
-  const [converter, setConverter] = useState({
-    mode: "usd_to_crypto",
+  const [manualAction, setManualAction] = useState({
+    kind: "credit" as ManualActionKind,
+    inputMode: "usd_to_crypto" as ManualInputMode,
     coin: "BTC",
     usd: "",
     crypto: "",
-    reason: ""
+    label: "Daily Gift",
+    note: "",
+    status: "Completed" as ManualActionStatus,
   });
 
   const [savingWallets, setSavingWallets] = useState(false);
   const [savingBalances, setSavingBalances] = useState(false);
-  const [applyingConversion, setApplyingConversion] = useState(false);
+  const [applyingManualAction, setApplyingManualAction] = useState(false);
+  const [updatingAccountStatus, setUpdatingAccountStatus] = useState(false);
 
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+
+  useEffect(() => {
+    let mounted = true;
+
+    const fetchMarket = async () => {
+      try {
+        const res = await fetch(
+          "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=bitcoin,ethereum,tether"
+        );
+        const data = await res.json();
+
+        if (!mounted || !Array.isArray(data)) return;
+
+        const btc = data.find((c: any) => c.id === "bitcoin")?.current_price ?? 65000;
+        const eth = data.find((c: any) => c.id === "ethereum")?.current_price ?? 3500;
+        const usdt = data.find((c: any) => c.id === "tether")?.current_price ?? 1;
+
+        setMarketPrices({
+          BTC: Number(btc),
+          ETH: Number(eth),
+          USDT: Number(usdt),
+        });
+      } catch (error) {
+        console.error("Admin user details market fetch error:", error);
+      }
+    };
+
+    fetchMarket();
+    const interval = setInterval(fetchMarket, 60000);
+
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   useEffect(() => {
     if (!id) return;
@@ -135,17 +213,19 @@ const AdminUserDetails = () => {
       const data = snapshot.val() as UserRecord;
       setUserData(data);
 
+      const walletsNode = data.wallets || {};
+
       setWallets({
         btc_address: data.btc_address || "",
         eth_address: data.eth_address || "",
-        usdt_address: data.usdt_address || ""
+        usdt_address: data.usdt_address || "",
       });
 
       setBalances({
-        btc_balance: String(data.btc_balance ?? 0),
-        eth_balance: String(data.eth_balance ?? 0),
-        usdt_balance: String(data.usdt_balance ?? 0),
-        usd_balance: String(data.usd_balance ?? 0)
+        btc_balance: String(toNumber(walletsNode.BTC ?? data.btc_balance)),
+        eth_balance: String(toNumber(walletsNode.ETH ?? data.eth_balance)),
+        usdt_balance: String(toNumber(walletsNode.USDT ?? data.usdt_balance)),
+        usd_balance: String(toNumber(data.usd_balance)),
       });
     });
 
@@ -158,7 +238,7 @@ const AdminUserDetails = () => {
       const data = snapshot.val();
       const rows = Object.entries(data).map(([activityId, value]) => ({
         id: activityId,
-        ...(value as any)
+        ...(value as any),
       })) as ActivityItem[];
 
       rows.sort((a, b) => Number(b.created_at || 0) - Number(a.created_at || 0));
@@ -180,19 +260,39 @@ const AdminUserDetails = () => {
     );
   }, [userData]);
 
-  const conversionPreview = useMemo(() => {
-    const usdValue = Number(converter.usd || 0);
-    const cryptoValue = Number(converter.crypto || 0);
-    const price = COIN_PRICES[converter.coin as keyof typeof COIN_PRICES] || 1;
+  const accountStatus = useMemo(() => {
+    return (userData?.accountStatus || userData?.status || "active").toLowerCase();
+  }, [userData]);
 
-    if (converter.mode === "usd_to_crypto") {
-      const result = usdValue > 0 ? usdValue / price : 0;
-      return result.toFixed(8);
+  const totalEstimatedUsd = useMemo(() => {
+    const btc = toNumber(balances.btc_balance);
+    const eth = toNumber(balances.eth_balance);
+    const usdt = toNumber(balances.usdt_balance);
+    return (
+      btc * marketPrices.BTC +
+      eth * marketPrices.ETH +
+      usdt * marketPrices.USDT
+    );
+  }, [balances, marketPrices]);
+
+  const manualPreview = useMemo(() => {
+    const price = marketPrices[manualAction.coin as keyof MarketPrices] || 1;
+    const usdValue = toNumber(manualAction.usd);
+    const cryptoValue = toNumber(manualAction.crypto);
+
+    if (manualAction.inputMode === "usd_to_crypto") {
+      const cryptoResult = price > 0 ? usdValue / price : 0;
+      return {
+        cryptoAmount: cryptoResult,
+        usdAmount: usdValue,
+      };
     }
 
-    const result = cryptoValue > 0 ? cryptoValue * price : 0;
-    return result.toFixed(2);
-  }, [converter]);
+    return {
+      cryptoAmount: cryptoValue,
+      usdAmount: cryptoValue * price,
+    };
+  }, [manualAction, marketPrices]);
 
   const clearMessages = () => {
     setSuccessMessage("");
@@ -206,7 +306,7 @@ const AdminUserDetails = () => {
         targetUserId: id,
         action,
         details,
-        created_at: Date.now()
+        created_at: Date.now(),
       });
     } catch (err) {
       console.error("Admin log error:", err);
@@ -222,11 +322,32 @@ const AdminUserDetails = () => {
         type,
         page: `/dashboard`,
         details,
-        created_at: Date.now()
+        created_at: Date.now(),
       });
     } catch (err) {
       console.error("Activity log error:", err);
     }
+  };
+
+  const syncUserBalances = async (nextBalances: {
+    btc_balance: number;
+    eth_balance: number;
+    usdt_balance: number;
+    usd_balance: number;
+  }) => {
+    if (!id) return;
+
+    await update(ref(db, `users/${id}`), {
+      btc_balance: nextBalances.btc_balance,
+      eth_balance: nextBalances.eth_balance,
+      usdt_balance: nextBalances.usdt_balance,
+      usd_balance: nextBalances.usd_balance,
+      wallets: {
+        BTC: nextBalances.btc_balance,
+        ETH: nextBalances.eth_balance,
+        USDT: nextBalances.usdt_balance,
+      },
+    });
   };
 
   const handleSaveWallets = async () => {
@@ -239,13 +360,13 @@ const AdminUserDetails = () => {
       await update(ref(db, `users/${id}`), {
         btc_address: wallets.btc_address.trim(),
         eth_address: wallets.eth_address.trim(),
-        usdt_address: wallets.usdt_address.trim()
+        usdt_address: wallets.usdt_address.trim(),
       });
 
       await addAdminLog("updated_wallet_addresses", { ...wallets });
       await addActivityLog("wallet_addresses_updated", {
         message: "Wallet addresses updated by admin.",
-        ...wallets
+        ...wallets,
       });
 
       setSuccessMessage("Wallet addresses updated successfully.");
@@ -264,24 +385,24 @@ const AdminUserDetails = () => {
 
     try {
       const payload = {
-        btc_balance: Number(balances.btc_balance || 0),
-        eth_balance: Number(balances.eth_balance || 0),
-        usdt_balance: Number(balances.usdt_balance || 0),
-        usd_balance: Number(balances.usd_balance || 0)
+        btc_balance: toNumber(balances.btc_balance),
+        eth_balance: toNumber(balances.eth_balance),
+        usdt_balance: toNumber(balances.usdt_balance),
+        usd_balance: toNumber(balances.usd_balance),
       };
 
-      await update(ref(db, `users/${id}`), payload);
+      await syncUserBalances(payload);
 
       const reasonText = balanceReason.trim() || "Manual balance update";
 
       await addAdminLog("updated_balances", {
         ...payload,
-        reason: reasonText
+        reason: reasonText,
       });
 
       await addActivityLog("balances_updated", {
         message: reasonText,
-        balances: payload
+        balances: payload,
       });
 
       setSuccessMessage("Balances updated successfully.");
@@ -293,85 +414,154 @@ const AdminUserDetails = () => {
     }
   };
 
-  const handleApplyConversion = async () => {
+  const updateUserAccountStatus = async (nextStatus: "active" | "suspended" | "blocked") => {
     if (!id) return;
 
     clearMessages();
-    setApplyingConversion(true);
+    setUpdatingAccountStatus(true);
 
     try {
+      await update(ref(db, `users/${id}`), {
+        accountStatus: nextStatus,
+        status: nextStatus === "active" ? "active" : nextStatus,
+      });
+
+      await addAdminLog("updated_account_status", {
+        accountStatus: nextStatus,
+      });
+
+      await addActivityLog("account_status_updated", {
+        message: `Account status changed to ${nextStatus}.`,
+        accountStatus: nextStatus,
+      });
+
+      setSuccessMessage(
+        nextStatus === "active"
+          ? "Account reactivated successfully."
+          : nextStatus === "suspended"
+          ? "Account suspended successfully."
+          : "Account blocked successfully."
+      );
+    } catch (err: any) {
+      setErrorMessage(err?.message || "Failed to update account status.");
+    } finally {
+      setUpdatingAccountStatus(false);
+    }
+  };
+
+  const handleApplyManualAction = async () => {
+    if (!id) return;
+
+    clearMessages();
+    setApplyingManualAction(true);
+
+    try {
+      const cryptoAmount = manualPreview.cryptoAmount;
+      const usdAmount = manualPreview.usdAmount;
+
+      if (cryptoAmount <= 0) {
+        setErrorMessage("Enter a valid amount.");
+        setApplyingManualAction(false);
+        return;
+      }
+
+      const currentBalances = {
+        btc_balance: toNumber(balances.btc_balance),
+        eth_balance: toNumber(balances.eth_balance),
+        usdt_balance: toNumber(balances.usdt_balance),
+        usd_balance: toNumber(balances.usd_balance),
+      };
+
       const coinField =
-        converter.coin === "BTC"
+        manualAction.coin === "BTC"
           ? "btc_balance"
-          : converter.coin === "ETH"
+          : manualAction.coin === "ETH"
           ? "eth_balance"
           : "usdt_balance";
 
-      const nextBalances = {
-        btc_balance: Number(balances.btc_balance || 0),
-        eth_balance: Number(balances.eth_balance || 0),
-        usdt_balance: Number(balances.usdt_balance || 0),
-        usd_balance: Number(balances.usd_balance || 0)
-      };
+      const nextBalances = { ...currentBalances };
 
-      if (converter.mode === "usd_to_crypto") {
-        const usdAmount = Number(converter.usd || 0);
-        const cryptoAmount = Number(conversionPreview || 0);
-
-        nextBalances[coinField as keyof typeof nextBalances] =
-          Number(nextBalances[coinField as keyof typeof nextBalances]) + cryptoAmount;
-
-        nextBalances.usd_balance = nextBalances.usd_balance + usdAmount;
+      if (manualAction.kind === "credit") {
+        nextBalances[coinField] = Number(nextBalances[coinField]) + cryptoAmount;
+        nextBalances.usd_balance = Number(nextBalances.usd_balance) + usdAmount;
       } else {
-        const cryptoAmount = Number(converter.crypto || 0);
-        const usdAmount = Number(conversionPreview || 0);
+        if (Number(nextBalances[coinField]) < cryptoAmount) {
+          setErrorMessage(`Insufficient ${manualAction.coin} balance for debit.`);
+          setApplyingManualAction(false);
+          return;
+        }
 
-        nextBalances[coinField as keyof typeof nextBalances] =
-          Number(nextBalances[coinField as keyof typeof nextBalances]) + cryptoAmount;
-
-        nextBalances.usd_balance = nextBalances.usd_balance + usdAmount;
+        nextBalances[coinField] = Number(nextBalances[coinField]) - cryptoAmount;
+        nextBalances.usd_balance = Math.max(0, Number(nextBalances.usd_balance) - usdAmount);
       }
 
-      await update(ref(db, `users/${id}`), nextBalances);
+      await syncUserBalances(nextBalances);
 
       setBalances({
         btc_balance: String(nextBalances.btc_balance),
         eth_balance: String(nextBalances.eth_balance),
         usdt_balance: String(nextBalances.usdt_balance),
-        usd_balance: String(nextBalances.usd_balance)
+        usd_balance: String(nextBalances.usd_balance),
       });
 
-      const reasonText = converter.reason.trim() || "Manual conversion applied";
+      const txRef = push(ref(db, `transactions/${id}`));
 
-      await addAdminLog("applied_balance_conversion", {
-        mode: converter.mode,
-        coin: converter.coin,
-        usd: converter.usd,
-        crypto: converter.crypto,
-        preview: conversionPreview,
-        reason: reasonText
+      await set(txRef, {
+        id: txRef.key,
+        userId: id,
+        userName: fullName,
+        userEmail: userData?.email || "",
+        type: manualAction.kind === "credit" ? "deposit" : "withdraw",
+        asset: manualAction.coin,
+        amount: cryptoAmount,
+        usdValue: usdAmount,
+        inputMode: manualAction.inputMode,
+        inputUsd: toNumber(manualAction.usd),
+        inputCrypto: toNumber(manualAction.crypto),
+        status: manualAction.status,
+        label: manualAction.label.trim() || "Manual Adjustment",
+        displayLabel: manualAction.label.trim() || "Manual Adjustment",
+        note: manualAction.note.trim() || "",
+        createdAt: Date.now(),
+        createdAtLabel: new Date().toLocaleString(),
+        createdByAdmin: true,
+        adminActionKind: manualAction.kind,
+        priceAtExecution: marketPrices[manualAction.coin as keyof MarketPrices] || 0,
       });
 
-      await addActivityLog("balance_conversion_applied", {
-        message: reasonText,
-        mode: converter.mode,
-        coin: converter.coin,
-        usd: converter.usd,
-        crypto: converter.crypto,
-        result: conversionPreview
+      await addAdminLog("manual_balance_action", {
+        kind: manualAction.kind,
+        asset: manualAction.coin,
+        inputMode: manualAction.inputMode,
+        inputUsd: toNumber(manualAction.usd),
+        inputCrypto: toNumber(manualAction.crypto),
+        cryptoAmount,
+        usdAmount,
+        label: manualAction.label.trim() || "Manual Adjustment",
+        status: manualAction.status,
+        note: manualAction.note.trim() || "",
       });
 
-      setSuccessMessage("Balance conversion applied successfully.");
-      setConverter((prev) => ({
+      await addActivityLog("manual_balance_action_applied", {
+        message: manualAction.label.trim() || "Manual Adjustment",
+        kind: manualAction.kind,
+        asset: manualAction.coin,
+        cryptoAmount,
+        usdAmount,
+        status: manualAction.status,
+      });
+
+      setSuccessMessage("Manual balance action applied successfully.");
+      setManualAction((prev) => ({
         ...prev,
         usd: "",
         crypto: "",
-        reason: ""
+        note: "",
       }));
     } catch (err: any) {
-      setErrorMessage(err?.message || "Failed to apply conversion.");
+      setErrorMessage(err?.message || "Failed to apply manual balance action.");
     } finally {
-      setApplyingConversion(false);
+      setApplyingManualAction(false);
     }
   };
 
@@ -382,7 +572,8 @@ const AdminUserDetails = () => {
       </div>
     );
   }
-    return (
+
+  return (
     <div className="space-y-6 text-white">
       <div className="flex flex-col 2xl:flex-row 2xl:items-center 2xl:justify-between gap-4">
         <div>
@@ -391,19 +582,34 @@ const AdminUserDetails = () => {
           </div>
           <h1 className="text-3xl md:text-4xl font-black tracking-tight">{fullName}</h1>
           <p className="text-slate-400 mt-2">
-            Manage profile, wallets, balances and visible client activity.
+            Manage profile, wallets, balances, manual actions and client activity.
           </p>
         </div>
 
-        <div
-          className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl border text-sm w-fit ${
-            userData.online
-              ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300"
-              : "border-white/10 bg-white/[0.04] text-slate-300"
-          }`}
-        >
-          {userData.online ? <Wifi size={16} /> : <WifiOff size={16} />}
-          <span>{userData.online ? "Online" : "Offline"}</span>
+        <div className="flex flex-wrap gap-3">
+          <div
+            className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl border text-sm ${
+              userData.online
+                ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300"
+                : "border-white/10 bg-white/[0.04] text-slate-300"
+            }`}
+          >
+            {userData.online ? <Wifi size={16} /> : <WifiOff size={16} />}
+            <span>{userData.online ? "Online" : "Offline"}</span>
+          </div>
+
+          <div
+            className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl border text-sm ${
+              accountStatus === "active"
+                ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300"
+                : accountStatus === "suspended"
+                ? "border-amber-500/20 bg-amber-500/10 text-amber-300"
+                : "border-rose-500/20 bg-rose-500/10 text-rose-300"
+            }`}
+          >
+            <ShieldAlert size={16} />
+            <span className="capitalize">{accountStatus}</span>
+          </div>
         </div>
       </div>
 
@@ -442,14 +648,14 @@ const AdminUserDetails = () => {
                 {
                   icon: <Globe size={16} />,
                   label: "Country / Region",
-                  value: `${userData.country || "-"} / ${userData.stateRegion || "-"}`
+                  value: `${userData.country || "-"} / ${userData.stateRegion || "-"}`,
                 },
                 { icon: <MapPin size={16} />, label: "City", value: userData.city || "-" },
                 {
                   icon: <Clock3 size={16} />,
                   label: "Last Seen",
-                  value: formatLastSeen(userData.last_seen)
-                }
+                  value: formatLastSeen(userData.last_seen),
+                },
               ].map((item) => (
                 <div
                   key={item.label}
@@ -464,6 +670,54 @@ const AdminUserDetails = () => {
                   </div>
                 </div>
               ))}
+            </div>
+
+            <div className="mt-5 rounded-2xl border border-white/8 bg-black/20 p-4">
+              <div className="text-sm text-slate-400 mb-1">Estimated Total Balance</div>
+              <div className="text-2xl font-black">{formatMoney(totalEstimatedUsd)}</div>
+            </div>
+          </div>
+
+          <div className="rounded-[28px] border border-white/10 bg-[#0a1222] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.14)]">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-11 h-11 rounded-2xl bg-rose-500/15 border border-rose-400/20 flex items-center justify-center text-rose-300">
+                <ShieldAlert size={18} />
+              </div>
+              <div>
+                <div className="text-[11px] uppercase tracking-[0.22em] text-white/35 font-bold mb-1">
+                  Account Control
+                </div>
+                <div className="text-xl font-black">Suspend / Block / Reactivate</div>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <button
+                onClick={() => updateUserAccountStatus("suspended")}
+                disabled={updatingAccountStatus}
+                className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-300 hover:bg-amber-500/15 disabled:opacity-50 px-5 py-3.5 font-semibold transition-all"
+              >
+                {updatingAccountStatus ? <RefreshCw size={16} className="animate-spin" /> : <ShieldAlert size={16} />}
+                <span>Suspend Account</span>
+              </button>
+
+              <button
+                onClick={() => updateUserAccountStatus("blocked")}
+                disabled={updatingAccountStatus}
+                className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-300 hover:bg-rose-500/15 disabled:opacity-50 px-5 py-3.5 font-semibold transition-all"
+              >
+                {updatingAccountStatus ? <RefreshCw size={16} className="animate-spin" /> : <Ban size={16} />}
+                <span>Block Account</span>
+              </button>
+
+              <button
+                onClick={() => updateUserAccountStatus("active")}
+                disabled={updatingAccountStatus}
+                className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 hover:bg-emerald-500/15 disabled:opacity-50 px-5 py-3.5 font-semibold transition-all"
+              >
+                {updatingAccountStatus ? <RefreshCw size={16} className="animate-spin" /> : <RotateCcw size={16} />}
+                <span>Reactivate Account</span>
+              </button>
             </div>
           </div>
 
@@ -557,7 +811,7 @@ const AdminUserDetails = () => {
                     onChange={(e) =>
                       setBalances((prev) => ({ ...prev, btc_balance: e.target.value }))
                     }
-                    className="clean-number w-full rounded-2xl bg-black/25 border border-white/10 px-4 py-3 text-white focus:outline-none focus:border-blue-500"
+                    className="w-full rounded-2xl bg-black/25 border border-white/10 px-4 py-3 text-white focus:outline-none focus:border-blue-500"
                   />
                 </div>
 
@@ -570,7 +824,7 @@ const AdminUserDetails = () => {
                     onChange={(e) =>
                       setBalances((prev) => ({ ...prev, eth_balance: e.target.value }))
                     }
-                    className="clean-number w-full rounded-2xl bg-black/25 border border-white/10 px-4 py-3 text-white focus:outline-none focus:border-blue-500"
+                    className="w-full rounded-2xl bg-black/25 border border-white/10 px-4 py-3 text-white focus:outline-none focus:border-blue-500"
                   />
                 </div>
 
@@ -583,7 +837,7 @@ const AdminUserDetails = () => {
                     onChange={(e) =>
                       setBalances((prev) => ({ ...prev, usdt_balance: e.target.value }))
                     }
-                    className="clean-number w-full rounded-2xl bg-black/25 border border-white/10 px-4 py-3 text-white focus:outline-none focus:border-blue-500"
+                    className="w-full rounded-2xl bg-black/25 border border-white/10 px-4 py-3 text-white focus:outline-none focus:border-blue-500"
                   />
                 </div>
 
@@ -596,15 +850,13 @@ const AdminUserDetails = () => {
                     onChange={(e) =>
                       setBalances((prev) => ({ ...prev, usd_balance: e.target.value }))
                     }
-                    className="clean-number w-full rounded-2xl bg-black/25 border border-white/10 px-4 py-3 text-white focus:outline-none focus:border-blue-500"
+                    className="w-full rounded-2xl bg-black/25 border border-white/10 px-4 py-3 text-white focus:outline-none focus:border-blue-500"
                   />
                 </div>
               </div>
 
               <div className="mt-4">
-                <label className="block text-sm text-slate-400 mb-2">
-                  Reason / Note
-                </label>
+                <label className="block text-sm text-slate-400 mb-2">Reason / Note</label>
                 <input
                   type="text"
                   value={balanceReason}
@@ -626,38 +878,51 @@ const AdminUserDetails = () => {
 
             <div className="rounded-[28px] border border-white/10 bg-[#0a1222] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.14)]">
               <div className="flex items-center gap-3 mb-5">
-                <div className="w-11 h-11 rounded-2xl bg-amber-500/15 border border-amber-400/20 flex items-center justify-center text-amber-300">
-                  <Activity size={18} />
+                <div
+                  className={`w-11 h-11 rounded-2xl border flex items-center justify-center ${
+                    manualAction.kind === "credit"
+                      ? "bg-amber-500/15 border-amber-400/20 text-amber-300"
+                      : "bg-rose-500/15 border-rose-400/20 text-rose-300"
+                  }`}
+                >
+                  {manualAction.kind === "credit" ? (
+                    <ArrowDownCircle size={18} />
+                  ) : (
+                    <ArrowUpCircle size={18} />
+                  )}
                 </div>
                 <div>
                   <div className="text-[11px] uppercase tracking-[0.22em] text-white/35 font-bold mb-1">
-                    Conversion
+                    Manual Action
                   </div>
-                  <div className="text-xl font-black">USD ↔ Crypto</div>
+                  <div className="text-xl font-black">Credit / Debit + Custom Label</div>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <div>
-                  <label className="block text-sm text-slate-400 mb-2">Mode</label>
+                  <label className="block text-sm text-slate-400 mb-2">Action</label>
                   <select
-                    value={converter.mode}
+                    value={manualAction.kind}
                     onChange={(e) =>
-                      setConverter((prev) => ({ ...prev, mode: e.target.value }))
+                      setManualAction((prev) => ({
+                        ...prev,
+                        kind: e.target.value as ManualActionKind,
+                      }))
                     }
                     className="w-full rounded-2xl bg-black/25 border border-white/10 px-4 py-3 text-white focus:outline-none focus:border-blue-500"
                   >
-                    <option value="usd_to_crypto">USD → Crypto</option>
-                    <option value="crypto_to_usd">Crypto → USD</option>
+                    <option value="credit">Credit</option>
+                    <option value="debit">Debit</option>
                   </select>
                 </div>
 
                 <div>
                   <label className="block text-sm text-slate-400 mb-2">Coin</label>
                   <select
-                    value={converter.coin}
+                    value={manualAction.coin}
                     onChange={(e) =>
-                      setConverter((prev) => ({ ...prev, coin: e.target.value }))
+                      setManualAction((prev) => ({ ...prev, coin: e.target.value }))
                     }
                     className="w-full rounded-2xl bg-black/25 border border-white/10 px-4 py-3 text-white focus:outline-none focus:border-blue-500"
                   >
@@ -666,20 +931,55 @@ const AdminUserDetails = () => {
                     <option value="USDT">USDT</option>
                   </select>
                 </div>
+
+                <div>
+                  <label className="block text-sm text-slate-400 mb-2">Input Mode</label>
+                  <select
+                    value={manualAction.inputMode}
+                    onChange={(e) =>
+                      setManualAction((prev) => ({
+                        ...prev,
+                        inputMode: e.target.value as ManualInputMode,
+                      }))
+                    }
+                    className="w-full rounded-2xl bg-black/25 border border-white/10 px-4 py-3 text-white focus:outline-none focus:border-blue-500"
+                  >
+                    <option value="usd_to_crypto">USD → Crypto</option>
+                    <option value="crypto_direct">Crypto Direct</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm text-slate-400 mb-2">Transaction Status</label>
+                  <select
+                    value={manualAction.status}
+                    onChange={(e) =>
+                      setManualAction((prev) => ({
+                        ...prev,
+                        status: e.target.value as ManualActionStatus,
+                      }))
+                    }
+                    className="w-full rounded-2xl bg-black/25 border border-white/10 px-4 py-3 text-white focus:outline-none focus:border-blue-500"
+                  >
+                    <option value="Pending">Pending</option>
+                    <option value="Completed">Completed</option>
+                    <option value="Failed">Failed</option>
+                  </select>
+                </div>
               </div>
 
-              {converter.mode === "usd_to_crypto" ? (
+              {manualAction.inputMode === "usd_to_crypto" ? (
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm text-slate-400 mb-2">USD Amount</label>
                     <input
                       type="number"
                       step="any"
-                      value={converter.usd}
+                      value={manualAction.usd}
                       onChange={(e) =>
-                        setConverter((prev) => ({ ...prev, usd: e.target.value }))
+                        setManualAction((prev) => ({ ...prev, usd: e.target.value }))
                       }
-                      className="clean-number w-full rounded-2xl bg-black/25 border border-white/10 px-4 py-3 text-white focus:outline-none focus:border-blue-500"
+                      className="w-full rounded-2xl bg-black/25 border border-white/10 px-4 py-3 text-white focus:outline-none focus:border-blue-500"
                       placeholder="Enter USD amount"
                     />
                   </div>
@@ -687,7 +987,7 @@ const AdminUserDetails = () => {
                   <div>
                     <label className="block text-sm text-slate-400 mb-2">Crypto Preview</label>
                     <div className="w-full rounded-2xl bg-white/[0.03] border border-white/10 px-4 py-3 text-white font-semibold">
-                      {conversionPreview} {converter.coin}
+                      {formatCoin(manualPreview.cryptoAmount)} {manualAction.coin}
                     </div>
                   </div>
                 </div>
@@ -698,46 +998,101 @@ const AdminUserDetails = () => {
                     <input
                       type="number"
                       step="any"
-                      value={converter.crypto}
+                      value={manualAction.crypto}
                       onChange={(e) =>
-                        setConverter((prev) => ({ ...prev, crypto: e.target.value }))
+                        setManualAction((prev) => ({ ...prev, crypto: e.target.value }))
                       }
-                      className="clean-number w-full rounded-2xl bg-black/25 border border-white/10 px-4 py-3 text-white focus:outline-none focus:border-blue-500"
-                      placeholder={`Enter ${converter.coin} amount`}
+                      className="w-full rounded-2xl bg-black/25 border border-white/10 px-4 py-3 text-white focus:outline-none focus:border-blue-500"
+                      placeholder={`Enter ${manualAction.coin} amount`}
                     />
                   </div>
 
                   <div>
                     <label className="block text-sm text-slate-400 mb-2">USD Preview</label>
                     <div className="w-full rounded-2xl bg-white/[0.03] border border-white/10 px-4 py-3 text-white font-semibold">
-                      ${conversionPreview}
+                      {formatMoney(manualPreview.usdAmount)}
                     </div>
                   </div>
                 </div>
               )}
 
-              <div className="mt-4">
-                <label className="block text-sm text-slate-400 mb-2">
-                  Reason / Note
-                </label>
-                <input
-                  type="text"
-                  value={converter.reason}
-                  onChange={(e) =>
-                    setConverter((prev) => ({ ...prev, reason: e.target.value }))
-                  }
-                  className="w-full rounded-2xl bg-black/25 border border-white/10 px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500"
-                  placeholder="Example: Deposit, Gift, Bonus, Manual correction"
-                />
+              <div className="mt-4 grid gap-4">
+                <div>
+                  <label className="block text-sm text-slate-400 mb-2">Display Label</label>
+                  <input
+                    type="text"
+                    value={manualAction.label}
+                    onChange={(e) =>
+                      setManualAction((prev) => ({ ...prev, label: e.target.value }))
+                    }
+                    className="w-full rounded-2xl bg-black/25 border border-white/10 px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500"
+                    placeholder="Example: Daily Gift, Deposit, Profit, Bonus"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm text-slate-400 mb-2">Reason / Note</label>
+                  <input
+                    type="text"
+                    value={manualAction.note}
+                    onChange={(e) =>
+                      setManualAction((prev) => ({ ...prev, note: e.target.value }))
+                    }
+                    className="w-full rounded-2xl bg-black/25 border border-white/10 px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500"
+                    placeholder="Example: Profit payout, Manual deposit, Daily gift"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-4 rounded-2xl border border-white/8 bg-white/[0.03] p-4">
+                <div className="text-sm text-slate-400 mb-2">Preview</div>
+                <div className="text-sm space-y-1">
+                  <div>
+                    <span className="text-slate-400">Action:</span>{" "}
+                    <span className="font-semibold capitalize">{manualAction.kind}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">Client will receive/change:</span>{" "}
+                    <span className="font-semibold">
+                      {formatCoin(manualPreview.cryptoAmount)} {manualAction.coin}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">USD value:</span>{" "}
+                    <span className="font-semibold">{formatMoney(manualPreview.usdAmount)}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">Label:</span>{" "}
+                    <span className="font-semibold">{manualAction.label || "Manual Adjustment"}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">Status:</span>{" "}
+                    <span className="font-semibold">{manualAction.status}</span>
+                  </div>
+                </div>
               </div>
 
               <button
-                onClick={handleApplyConversion}
-                disabled={applyingConversion}
-                className="w-full mt-5 inline-flex items-center justify-center gap-2 rounded-2xl bg-amber-500 hover:bg-amber-400 text-black disabled:opacity-50 px-5 py-3.5 font-semibold transition-all"
+                onClick={handleApplyManualAction}
+                disabled={applyingManualAction}
+                className={`w-full mt-5 inline-flex items-center justify-center gap-2 rounded-2xl disabled:opacity-50 px-5 py-3.5 font-semibold transition-all ${
+                  manualAction.kind === "credit"
+                    ? "bg-amber-500 hover:bg-amber-400 text-black"
+                    : "bg-rose-500 hover:bg-rose-400 text-white"
+                }`}
               >
-                {applyingConversion ? <RefreshCw size={16} className="animate-spin" /> : <ChevronRight size={16} />}
-                <span>{applyingConversion ? "Applying..." : "Apply Conversion"}</span>
+                {applyingManualAction ? (
+                  <RefreshCw size={16} className="animate-spin" />
+                ) : (
+                  <ChevronRight size={16} />
+                )}
+                <span>
+                  {applyingManualAction
+                    ? "Applying..."
+                    : manualAction.kind === "credit"
+                    ? "Apply Credit"
+                    : "Apply Debit"}
+                </span>
               </button>
             </div>
           </div>
