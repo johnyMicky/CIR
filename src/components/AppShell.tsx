@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
+import { signOut } from "firebase/auth";
 import {
   LayoutDashboard,
   Wallet,
@@ -14,6 +15,8 @@ import {
   EyeOff,
   LogOut,
 } from "lucide-react";
+
+import { auth } from "../firebase";
 
 type SidebarKey =
   | "dashboard"
@@ -30,6 +33,7 @@ const AppShell = () => {
 
   const [showBalance, setShowBalance] = useState(true);
   const [globalSearch, setGlobalSearch] = useState("");
+  const [logoutMessage, setLogoutMessage] = useState("");
 
   const sidebarItems: {
     key: SidebarKey;
@@ -52,19 +56,33 @@ const AppShell = () => {
     if (location.pathname.startsWith("/history")) return "history";
     if (location.pathname.startsWith("/settings")) return "settings";
     if (location.pathname.startsWith("/exchange")) return "swap";
-    if (location.pathname.startsWith("/dashboard")) return "dashboard";
     if (location.pathname.startsWith("/support")) return "support";
+    if (location.pathname.startsWith("/dashboard")) return "dashboard";
     return "dashboard";
   }, [location.pathname]);
 
-  const logout = () => {
-    localStorage.removeItem("authUser");
-    navigate("/login");
+  const logout = async () => {
+    try {
+      await signOut(auth);
+      localStorage.removeItem("authUser");
+      setLogoutMessage("Successfully logged out");
+
+      setTimeout(() => {
+        navigate("/login", { replace: true });
+      }, 700);
+    } catch (error) {
+      console.error("Logout error:", error);
+      setLogoutMessage("Logout failed");
+    }
   };
 
   return (
     <div className="flex h-screen w-full bg-[#070F1F] text-white">
-      {/* SIDEBAR */}
+      {logoutMessage && (
+        <div className="fixed right-4 top-4 z-[120] rounded-2xl border border-cyan-400/20 bg-[#0F1B33]/95 px-4 py-3 text-sm text-cyan-100 shadow-2xl backdrop-blur-xl">
+          {logoutMessage}
+        </div>
+      )}
 
       <aside className="flex w-[260px] flex-col border-r border-white/10 bg-[#0B1628] p-5">
         <div className="mb-8 flex items-center gap-3">
@@ -111,14 +129,8 @@ const AppShell = () => {
         </div>
       </aside>
 
-      {/* MAIN AREA */}
-
       <div className="flex flex-1 flex-col overflow-hidden">
-        {/* HEADER */}
-
         <header className="flex h-[70px] items-center justify-between border-b border-white/10 bg-[#0B1628] px-6">
-          {/* SEARCH */}
-
           <div className="relative w-[380px]">
             <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
 
@@ -130,11 +142,7 @@ const AppShell = () => {
             />
           </div>
 
-          {/* HEADER RIGHT */}
-
           <div className="flex items-center gap-4">
-            {/* BALANCE TOGGLE */}
-
             <button
               onClick={() => setShowBalance((s) => !s)}
               className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 hover:bg-white/10"
@@ -146,13 +154,9 @@ const AppShell = () => {
               )}
             </button>
 
-            {/* NOTIFICATION */}
-
             <button className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 hover:bg-white/10">
               <Bell className="h-4 w-4" />
             </button>
-
-            {/* USER */}
 
             <div className="flex items-center gap-3 rounded-xl bg-white/5 px-4 py-2">
               <div className="h-8 w-8 rounded-full bg-cyan-400/30"></div>
@@ -160,8 +164,6 @@ const AppShell = () => {
             </div>
           </div>
         </header>
-
-        {/* PAGE CONTENT */}
 
         <main className="flex-1 overflow-y-auto bg-[#070F1F]">
           <Outlet context={{ showBalance, setShowBalance, globalSearch }} />
