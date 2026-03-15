@@ -719,13 +719,55 @@ const LandingPage = () => {
             </div>
 
             <div>
-              <div className="text-[11px] uppercase tracking-[0.22em] text-white/35 font-bold mb-4">Support</div>
+              <div className="text-[11px] uppercase tracking-[0.22em] text-white/35 font-bold mb-4">
+                Support
+              </div>
+
               <div className="space-y-3">
                 <div className="flex items-center gap-3 text-sm text-slate-300">
                   <Mail size={15} className="text-blue-400" />
                   support@axcelci.com
                 </div>
-                <div className="text-sm text-slate-400">Private client communication and platform assistance.</div>
+
+                <div className="text-sm text-slate-400">
+                  Private client communication and platform assistance.
+                </div>
+
+                <div className="flex items-center gap-4 pt-3">
+                  <a
+                    href="https://facebook.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center w-9 h-9 rounded-xl bg-white/5 border border-white/10 hover:bg-blue-600/20 hover:border-blue-500/40 transition-all"
+                  >
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                      className="text-blue-400"
+                    >
+                      <path d="M22 12a10 10 0 10-11.5 9.9v-7H8v-3h2.5V9.5c0-2.5 1.5-4 3.8-4 1.1 0 2.2.2 2.2.2v2.4H15c-1.3 0-1.7.8-1.7 1.6V12H17l-.6 3h-3.1v7A10 10 0 0022 12z" />
+                    </svg>
+                  </a>
+
+                  <a
+                    href="https://twitter.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center w-9 h-9 rounded-xl bg-white/5 border border-white/10 hover:bg-cyan-500/20 hover:border-cyan-400/40 transition-all"
+                  >
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                      className="text-cyan-400"
+                    >
+                      <path d="M22.46 6c-.77.35-1.5.58-2.27.69a4.02 4.02 0 001.75-2.23c-.78.47-1.65.8-2.57.98A4.01 4.01 0 0016.1 4c-2.3 0-4.17 1.9-4.17 4.22 0 .33.03.65.1.96-3.47-.18-6.55-1.87-8.6-4.44a4.25 4.25 0 00-.57 2.12c0 1.46.72 2.75 1.82 3.5-.66-.02-1.28-.21-1.82-.5v.05c0 2.05 1.42 3.77 3.3 4.16-.35.1-.73.15-1.12.15-.27 0-.54-.03-.8-.07.54 1.72 2.1 2.98 3.95 3.02A8.05 8.05 0 012 19.54 11.36 11.36 0 008.29 21c7.55 0 11.68-6.36 11.68-11.87v-.54c.8-.59 1.5-1.32 2.05-2.16z" />
+                    </svg>
+                  </a>
+                </div>
               </div>
             </div>
           </div>
