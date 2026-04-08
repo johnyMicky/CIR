@@ -885,5 +885,5 @@ function App() {
     </Routes>
   );
 }
-
+<button onClick={createAdmin}>Create Admin</button>
 export default App;
