@@ -1,7 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Routes, Route, Navigate, Link } from 'react-router-dom';
-import { onAuthStateChanged } from 'firebase/auth';
-import { ref, get } from 'firebase/database';
+import {
+  onAuthStateChanged,
+  createUserWithEmailAndPassword,
+  signOut
+} from 'firebase/auth';
+import { ref, get, set } from 'firebase/database';
 import {
   Shield,
   Lock,
@@ -797,6 +801,30 @@ function App() {
   const { user, setUser } = useAuth() as any;
   const [loading, setLoading] = useState(true);
 
+  const createAdmin = async () => {
+    try {
+      const email = 'admin@axcel.com';
+      const password = 'Admin12345!';
+
+      const userCred = await createUserWithEmailAndPassword(auth, email, password);
+      const uid = userCred.user.uid;
+
+      await set(ref(db, `users/${uid}`), {
+        fullName: 'Main Admin',
+        email,
+        role: 'admin',
+        status: 'active'
+      });
+
+      await signOut(auth);
+
+      alert(`✅ Admin created successfully.\n\nEmail: ${email}\nPassword: ${password}`);
+    } catch (error: any) {
+      console.error('Create admin error:', error);
+      alert(error?.message || 'Failed to create admin');
+    }
+  };
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       try {
@@ -841,48 +869,68 @@ function App() {
   }
 
   return (
-    <Routes>
-      <Route path="/" element={<LandingPage />} />
-      <Route path="/documentation" element={<Documentation />} />
-      <Route path="/terms" element={<TermsOfService />} />
-      <Route path="/privacy" element={<PrivacyPolicy />} />
-      <Route path="/aml-kyc" element={<AmlKycPolicy />} />
+    <>
+      <div style={{ position: 'fixed', top: 20, right: 20, zIndex: 9999 }}>
+        <button
+          onClick={createAdmin}
+          style={{
+            background: '#2563eb',
+            color: '#ffffff',
+            border: 'none',
+            borderRadius: '12px',
+            padding: '12px 16px',
+            fontWeight: 700,
+            cursor: 'pointer',
+            boxShadow: '0 10px 30px rgba(37,99,235,0.35)'
+          }}
+        >
+          Create Admin
+        </button>
+      </div>
 
-      <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <Login />} />
-      <Route path="/register" element={user ? <Navigate to="/dashboard" replace /> : <Register />} />
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/documentation" element={<Documentation />} />
+        <Route path="/terms" element={<TermsOfService />} />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/aml-kyc" element={<AmlKycPolicy />} />
 
-      <Route element={user ? <AppShell /> : <Navigate to="/login" replace />}>
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/my-wallets" element={<MyWallets />} />
-        <Route path="/send-receive" element={<SendReceive />} />
-        <Route path="/exchange" element={<ExchangeSwap />} />
-        <Route path="/history" element={<History />} />
-        <Route path="/settings" element={<SettingsPage />} />
-        <Route path="/support" element={<SupportPage />} />
-      </Route>
+        <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <Login />} />
+        <Route path="/register" element={user ? <Navigate to="/dashboard" replace /> : <Register />} />
 
-      <Route
-        path="/admin/login"
-        element={user?.role === 'admin' ? <Navigate to="/admin/dashboard" replace /> : <AdminLogin />}
-      />
+        <Route element={user ? <AppShell /> : <Navigate to="/login" replace />}>
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/my-wallets" element={<MyWallets />} />
+          <Route path="/send-receive" element={<SendReceive />} />
+          <Route path="/exchange" element={<ExchangeSwap />} />
+          <Route path="/history" element={<History />} />
+          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/support" element={<SupportPage />} />
+        </Route>
 
-      <Route
-        path="/admin"
-        element={
-          <AdminRoute>
-            <AdminLayout />
-          </AdminRoute>
-        }
-      >
-        <Route index element={<Navigate to="/admin/dashboard" replace />} />
-        <Route path="dashboard" element={<AdminDashboard />} />
-        <Route path="users" element={<AdminUsers />} />
-        <Route path="users/:id" element={<AdminUserDetails />} />
-        <Route path="withdrawals" element={<AdminWithdrawals />} />
-      </Route>
+        <Route
+          path="/admin/login"
+          element={user?.role === 'admin' ? <Navigate to="/admin/dashboard" replace /> : <AdminLogin />}
+        />
 
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+        <Route
+          path="/admin"
+          element={
+            <AdminRoute>
+              <AdminLayout />
+            </AdminRoute>
+          }
+        >
+          <Route index element={<Navigate to="/admin/dashboard" replace />} />
+          <Route path="dashboard" element={<AdminDashboard />} />
+          <Route path="users" element={<AdminUsers />} />
+          <Route path="users/:id" element={<AdminUserDetails />} />
+          <Route path="withdrawals" element={<AdminWithdrawals />} />
+        </Route>
+
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </>
   );
 }
 
