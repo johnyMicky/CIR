@@ -473,10 +473,25 @@ function App() {
       <Route path="/privacy" element={<PrivacyPolicy />} />
       <Route path="/aml-kyc" element={<AmlKycPolicy />} />
 
-      <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <Login />} />
-      <Route path="/register" element={user ? <Navigate to="/dashboard" replace /> : <Register />} />
+      <Route
+        path="/login"
+        element={
+          user && user.role !== 'admin'
+            ? <Navigate to="/dashboard" replace />
+            : <Login />
+        }
+      />
 
-      <Route element={user ? <AppShell /> : <Navigate to="/login" replace />}>
+      <Route
+        path="/register"
+        element={
+          user && user.role !== 'admin'
+            ? <Navigate to="/dashboard" replace />
+            : <Register />
+        }
+      />
+
+      <Route element={user && user.role !== 'admin' ? <AppShell /> : <Navigate to="/login" replace />}>
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/my-wallets" element={<MyWallets />} />
         <Route path="/send-receive" element={<SendReceive />} />
@@ -488,7 +503,11 @@ function App() {
 
       <Route
         path="/admin/login"
-        element={user?.role === 'admin' ? <Navigate to="/admin/dashboard" replace /> : <AdminLogin />}
+        element={
+          user?.role === 'admin'
+            ? <Navigate to="/admin/dashboard" replace />
+            : <AdminLogin />
+        }
       />
 
       <Route
