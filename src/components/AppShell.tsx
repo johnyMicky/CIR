@@ -216,7 +216,7 @@ const AppShell = () => {
               </div>
             </div>
 
-            <div className="flex items-center justify-between gap-3 sm:justify-end sm:gap-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 sm:justify-end sm:gap-4">
               <div className="flex items-center gap-2 sm:gap-3">
                 <button
                   onClick={() => setShowBalance((s) => !s)}
@@ -240,6 +240,14 @@ const AppShell = () => {
                   <div className="truncate text-sm">{displayName}</div>
                 </div>
               </div>
+
+              <button
+                onClick={logout}
+                className="flex h-10 items-center gap-2 rounded-xl bg-white/5 px-4 text-sm text-slate-300 hover:bg-white/10"
+              >
+                <LogOut className="h-4 w-4 shrink-0" />
+                <span>Logout</span>
+              </button>
             </div>
           </div>
         </header>
