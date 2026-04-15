@@ -5,10 +5,15 @@ import { db } from "../../firebase";
 type Withdrawal = {
   id: string;
   userId: string;
+  userName?: string;
+  userEmail?: string;
   amount: number;
   asset: string;
   status: string;
+  walletAddress?: string;
+  note?: string;
   createdAt?: number;
+  createdAtLabel?: string;
 };
 
 const Withdrawals = () => {
@@ -30,7 +35,8 @@ const Withdrawals = () => {
         ...data[key],
       }));
 
-      setWithdrawals(list.reverse());
+      list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+      setWithdrawals(list);
     });
 
     return () => unsubscribe();
@@ -46,6 +52,32 @@ const Withdrawals = () => {
     }
   };
 
+  const getStatusColor = (status?: string) => {
+    const normalized = String(status || "pending").toLowerCase();
+
+    if (normalized === "approved") return "text-green-400";
+    if (normalized === "rejected") return "text-red-400";
+    return "text-yellow-400";
+  };
+
+  const formatDate = (item: Withdrawal) => {
+    if (item.createdAtLabel) return item.createdAtLabel;
+
+    if (item.createdAt) {
+      try {
+        return new Date(item.createdAt).toLocaleString();
+      } catch {
+        return "Unknown time";
+      }
+    }
+
+    return "Unknown time";
+  };
+
+  const getUserDisplay = (item: Withdrawal) => {
+    return item.userName || item.userEmail || item.userId || "Unknown user";
+  };
+
   return (
     <div className="text-white p-6">
       <h1 className="text-3xl font-bold mb-6">Withdraw Requests</h1>
@@ -57,33 +89,61 @@ const Withdrawals = () => {
           {withdrawals.map((item) => (
             <div
               key={item.id}
-              className="border border-white/10 bg-white/5 rounded-xl p-4 flex justify-between items-center"
+              className="border border-white/10 bg-white/5 rounded-xl p-5 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4"
             >
-              <div>
-                <div className="text-lg font-semibold">
+              <div className="space-y-2">
+                <div className="text-2xl font-bold">
                   {item.amount} {item.asset}
                 </div>
-                <div className="text-sm text-slate-400">
-                  User: {item.userId}
+
+                <div className="text-sm text-slate-300">
+                  <span className="text-slate-400">User:</span>{" "}
+                  {getUserDisplay(item)}
                 </div>
+
+                {item.userEmail && (
+                  <div className="text-sm text-slate-300">
+                    <span className="text-slate-400">Email:</span>{" "}
+                    {item.userEmail}
+                  </div>
+                )}
+
+                {item.userId && (
+                  <div className="text-sm text-slate-300 break-all">
+                    <span className="text-slate-400">User ID:</span>{" "}
+                    {item.userId}
+                  </div>
+                )}
+
+                {item.walletAddress && (
+                  <div className="text-sm text-slate-300 break-all">
+                    <span className="text-slate-400">Wallet:</span>{" "}
+                    {item.walletAddress}
+                  </div>
+                )}
+
+                {item.note && (
+                  <div className="text-sm text-slate-300">
+                    <span className="text-slate-400">Note:</span>{" "}
+                    {item.note}
+                  </div>
+                )}
+
+                <div className="text-sm text-slate-300">
+                  <span className="text-slate-400">Time:</span>{" "}
+                  {formatDate(item)}
+                </div>
+
                 <div className="text-sm mt-1">
-                  Status:{" "}
-                  <span
-                    className={`font-semibold ${
-                      item.status === "approved"
-                        ? "text-green-400"
-                        : item.status === "rejected"
-                        ? "text-red-400"
-                        : "text-yellow-400"
-                    }`}
-                  >
+                  <span className="text-slate-400">Status:</span>{" "}
+                  <span className={`font-semibold ${getStatusColor(item.status)}`}>
                     {item.status || "pending"}
                   </span>
                 </div>
               </div>
 
-              {item.status === "pending" && (
-                <div className="flex gap-2">
+              {String(item.status || "pending").toLowerCase() === "pending" && (
+                <div className="flex gap-2 shrink-0">
                   <button
                     onClick={() => handleUpdate(item.id, "approved")}
                     className="px-4 py-2 bg-green-600 hover:bg-green-500 rounded-lg text-sm font-semibold"
