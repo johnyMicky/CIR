@@ -314,6 +314,42 @@ const SendReceive = () => {
     }
   };
 
+  const createWithdrawRequest = async (payload: {
+    asset: string;
+    amount: number;
+    walletAddress?: string;
+    note?: string;
+  }) => {
+    if (!userId) {
+      setToast("User session not found");
+      return false;
+    }
+
+    try {
+      const withdrawRef = push(ref(db, "withdraw_requests"));
+
+      await set(withdrawRef, {
+        id: withdrawRef.key,
+        userId,
+        userName: buildUserDisplayName(),
+        userEmail: userData.email || "",
+        amount: payload.amount,
+        asset: payload.asset,
+        walletAddress: payload.walletAddress || "",
+        note: payload.note || "",
+        status: "pending",
+        createdAt: Date.now(),
+        createdAtLabel: new Date().toLocaleString(),
+      });
+
+      return true;
+    } catch (error) {
+      console.error("Withdraw request write error:", error);
+      setToast("Failed to create withdraw request");
+      return false;
+    }
+  };
+
   const handleDepositRequest = async () => {
     if (!selectedWallet) {
       setToast("Select asset");
@@ -364,7 +400,7 @@ const SendReceive = () => {
       return;
     }
 
-    const ok = await createTransaction({
+    const txOk = await createTransaction({
       type: "withdraw",
       asset: selectedWallet.symbol,
       amount: parsedAmount,
@@ -372,7 +408,16 @@ const SendReceive = () => {
       note,
     });
 
-    if (ok) {
+    if (!txOk) return;
+
+    const withdrawOk = await createWithdrawRequest({
+      asset: selectedWallet.symbol,
+      amount: parsedAmount,
+      walletAddress: sendAddress.trim(),
+      note,
+    });
+
+    if (withdrawOk) {
       setToast("Withdraw request submitted");
       setSendAmount("");
       setSendAddress("");
